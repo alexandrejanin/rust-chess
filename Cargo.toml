@@ -1,7 +1,11 @@
 [package]
 name = "rust_sdl2"
 version = "0.1.0"
-authors = [" <killingbanana@gmail.com>"]
+authors = ["Alexandre Janin <alexandrejanin92@gmail.com>"]
 
-[dependencies]
-sdl2 = "0.31"
+[dependencies.sdl2]
+#git = "https://github.com/AngryLawyer/rust-sdl2"
+version = "0.31"
+default-features = false
+features = ["ttf","image"]
+
