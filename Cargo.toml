@@ -1,5 +1,5 @@
 [package]
-name = "rust_sdl2"
+name = "rust-chess"
 version = "0.1.0"
 authors = ["Alexandre Janin <alexandrejanin92@gmail.com>"]
 
