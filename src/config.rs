@@ -1,7 +1,7 @@
-extern crate toml;
-
 use std::fs;
 use std::path::Path;
+
+use ron::de;
 
 #[derive(Debug, Deserialize)]
 pub struct Config {
@@ -16,9 +16,9 @@ pub struct DisplayConfig {
 }
 
 impl Config {
-    pub fn from_file(path: &Path) -> Config {
+    pub fn from_file(path: &Path) -> de::Result<Config> {
         let text = fs::read_to_string(path).unwrap();
-        toml::from_str(&text).unwrap()
+        de::from_str(&text)
     }
 }
 

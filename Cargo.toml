@@ -1,17 +1,15 @@
 [package]
-name = "rust-chess"
+name = "rust-chess-gl"
 version = "0.1.0"
 authors = ["Alexandre Janin <alexandrejanin92@gmail.com>"]
 
 [dependencies]
-serde = "1.0.70"
-serde_derive = "1.0.70"
-toml = "0.4"
-time = "*"
+gl = "*"
+ron = "*"
+serde = "*"
 
 [dependencies.sdl2]
-#git = "https://github.com/AngryLawyer/rust-sdl2"
-version = "0.31"
+version = "*"
 default-features = false
-features = ["ttf","image"]
+features = ["image", "ttf"]
 
