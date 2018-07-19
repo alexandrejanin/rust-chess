@@ -1,12 +1,10 @@
+use config;
+use gl;
+use sdl2;
 use std;
 use std::ffi::{CStr, CString};
 use std::fs;
 use std::path::Path;
-
-use gl;
-use sdl2;
-
-use config;
 
 //==================
 // Graphics Manager
@@ -20,6 +18,7 @@ pub struct GraphicsManager<'a> {
     window: sdl2::video::Window,
     gl_context: sdl2::video::GLContext,
     program: Option<Program>,
+    vao: gl::types::GLuint,
 }
 
 impl<'a> GraphicsManager<'a> {
@@ -54,14 +53,59 @@ impl<'a> GraphicsManager<'a> {
             window,
             gl_context,
             program: None,
+            vao: 0,
         }
     }
 
     pub fn init(&mut self) {
+        //Load shaders
         self.load_shaders(Path::new("res/shaders/triangle.vert"), Path::new("res/shaders/triangle.frag"));
-        
+
+        //Set GL clear color
         unsafe {
             gl::ClearColor(0.3, 0.3, 0.5, 1.0);
+        }
+
+        //Triangle vertices
+        let vertices: Vec<f32> = vec![
+            -0.5, -0.5, 0.0,
+            0.5, -0.5, 0.0,
+            0.0, 0.5, 0.0
+        ];
+
+        //Create VBO
+        let mut vbo: gl::types::GLuint = 0;
+        unsafe {
+            gl::GenBuffers(1, &mut vbo);
+            gl::BindBuffer(gl::ARRAY_BUFFER, vbo);
+            gl::BufferData(
+                gl::ARRAY_BUFFER,
+                (vertices.len() * std::mem::size_of::<f32>()) as gl::types::GLsizeiptr, //Data length
+                vertices.as_ptr() as *const gl::types::GLvoid, //Data location
+                gl::STATIC_DRAW,
+            );
+            gl::BindBuffer(gl::ARRAY_BUFFER, 0);
+        }
+
+        //Create VAO
+        unsafe {
+            gl::GenVertexArrays(1, &mut self.vao);
+            gl::BindVertexArray(self.vao);
+            gl::BindBuffer(gl::ARRAY_BUFFER, vbo);
+            //Vertex location 0
+            gl::EnableVertexAttribArray(0);
+            gl::VertexAttribPointer(
+                0, //Location
+                3, //Number of components per vertex
+                gl::FLOAT,
+                gl::FALSE, //Normalize
+                (3 * std::mem::size_of::<f32>()) as gl::types::GLint, //Stride
+                std::ptr::null() //Offset
+            );
+
+            //Unbind
+            gl::BindBuffer(gl::ARRAY_BUFFER, 0);
+            gl::BindVertexArray(0);
         }
     }
 
@@ -78,7 +122,8 @@ impl<'a> GraphicsManager<'a> {
     }
 
     ///Renders the current frame
-    pub fn render(&self) {
+    pub fn render(&self) -> Result<(), &'static str> {
+        //Set and clear view
         unsafe {
             gl::Viewport(
                 0,
@@ -89,7 +134,31 @@ impl<'a> GraphicsManager<'a> {
             gl::Clear(gl::COLOR_BUFFER_BIT);
         }
 
+        //Check and use program
+        match self.program {
+            None => return Err("ERROR: OpenGL Program not loaded!"),
+            Some(ref p) => p.set_used(),
+        }
+
+        //Check and bind and draw vertices
+        match self.vao {
+            //VAO = 0: not initialized
+            0 => return Err("ERROR: VAO not initialized!"),
+            //VAO != 0: ok
+            _ => unsafe {
+                gl::BindVertexArray(self.vao);
+                gl::DrawArrays(
+                    gl::TRIANGLES, //Draw mode
+                    0, //Starting index
+                    3, //Number of vertices
+                );
+            },
+        }
+
+        //Swap buffers
         self.window.gl_swap_window();
+
+        Ok(())
     }
 }
 

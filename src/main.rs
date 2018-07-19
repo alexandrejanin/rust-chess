@@ -1,12 +1,12 @@
+extern crate gl;
 extern crate ron;
+extern crate sdl2;
 #[macro_use]
 extern crate serde;
-extern crate gl;
-extern crate sdl2;
 
 mod config;
 mod graphics;
-//mod input;
+mod input;
 
 fn main() {
     //Load Configuration from file
@@ -20,12 +20,14 @@ fn main() {
     graphics_manager.init();
 
     //Initialize events
-    let mut event_pump = sdl.event_pump().unwrap();
+    let mut events = sdl.event_pump().unwrap();
+
+    let mut input_manager = input::InputManager::new();
 
     //Main loop
     'main: loop {
         //Handle events
-        for event in event_pump.poll_iter() {
+        for event in events.poll_iter() {
             match event {
                 sdl2::event::Event::Quit { .. } => break 'main,
                 _ => {}
@@ -34,7 +36,20 @@ fn main() {
 
         //Game Logic
 
+        input_manager.update(&events);
+
+        if input_manager.get_key_pressed(sdl2::keyboard::Keycode::Space) {
+            println!("Space pressed!");
+        }
+
         //Draw
-        graphics_manager.render();
+        let render_result = graphics_manager.render();
+        match render_result {
+            Ok(_) => {},
+            Err(message) => {
+                println!("{}", message);
+                break 'main
+            },
+        }
     }
 }
