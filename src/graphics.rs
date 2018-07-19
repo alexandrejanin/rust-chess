@@ -57,8 +57,16 @@ impl<'a> GraphicsManager<'a> {
         }
     }
 
+    pub fn init(&mut self) {
+        self.load_shaders(Path::new("res/shaders/triangle.vert"), Path::new("res/shaders/triangle.frag"));
+        
+        unsafe {
+            gl::ClearColor(0.3, 0.3, 0.5, 1.0);
+        }
+    }
+
     ///Create and link OpenGL Program, from Vertex and Fragment shaders.
-    pub fn load_shaders(&mut self, v_path: &Path, f_path: &Path) {
+    fn load_shaders(&mut self, v_path: &Path, f_path: &Path) {
         //Create shaders and program
         let v_shader = Shader::from_file(gl::VERTEX_SHADER, v_path).unwrap();
         let f_shader = Shader::from_file(gl::FRAGMENT_SHADER, f_path).unwrap();

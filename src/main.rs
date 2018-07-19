@@ -17,10 +17,7 @@ fn main() {
 
     //Initialize graphics
     let mut graphics_manager = graphics::GraphicsManager::new(&conf, &sdl);
-    graphics_manager.load_shaders(
-        std::path::Path::new("res/shaders/triangle.vert"),
-        std::path::Path::new("res/shaders/triangle.frag"),
-    );
+    graphics_manager.init();
 
     //Initialize events
     let mut event_pump = sdl.event_pump().unwrap();
