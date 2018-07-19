@@ -10,14 +10,24 @@ mod input;
 
 fn main() {
     //Load Configuration from file
-    let conf = config::Config::from_file(std::path::Path::new("res/config.ron")).unwrap();
+    let conf = match config::Config::from_file(std::path::Path::new("res/config.ron")) {
+        Ok(conf) => conf,
+        Err(error) => {
+            println!("ERROR: Could not load config file, exiting.\n{}", error);
+            return;
+        },
+    };
 
     //Initialize SDL
     let sdl = sdl2::init().unwrap();
 
     //Initialize graphics
     let mut graphics_manager = graphics::GraphicsManager::new(&conf, &sdl);
-    graphics_manager.init();
+
+    if let Err(error) = graphics_manager.init() {
+        println!("ERROR: Graphics initialization failed, exiting.\n{}", error);
+        return;
+    };
 
     //Initialize events
     let mut events = sdl.event_pump().unwrap();

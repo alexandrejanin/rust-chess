@@ -57,9 +57,12 @@ impl<'a> GraphicsManager<'a> {
         }
     }
 
-    pub fn init(&mut self) {
+    pub fn init(&mut self) -> Result<(), String> {
         //Load shaders
-        self.load_shaders(Path::new("res/shaders/triangle.vert"), Path::new("res/shaders/triangle.frag"));
+        self.program = match self.load_shaders(Path::new("res/shaders/triangle.vert"), Path::new("res/shaders/triangle.frag")) {
+            Ok(program) => Some(program),
+            Err(error) => return Err(format!("{}", error)),
+        };
 
         //Set GL clear color
         unsafe {
@@ -87,8 +90,8 @@ impl<'a> GraphicsManager<'a> {
             gl::BindBuffer(gl::ARRAY_BUFFER, 0);
         }
 
-        //Create VAO
         unsafe {
+            //Create and bind VAO
             gl::GenVertexArrays(1, &mut self.vao);
             gl::BindVertexArray(self.vao);
             gl::BindBuffer(gl::ARRAY_BUFFER, vbo);
@@ -107,22 +110,30 @@ impl<'a> GraphicsManager<'a> {
             gl::BindBuffer(gl::ARRAY_BUFFER, 0);
             gl::BindVertexArray(0);
         }
+
+        Ok(())
     }
 
     ///Create and link OpenGL Program, from Vertex and Fragment shaders.
-    fn load_shaders(&mut self, v_path: &Path, f_path: &Path) {
+    fn load_shaders(&mut self, v_path: &Path, f_path: &Path) -> Result<Program, String> {
         //Create shaders and program
-        let v_shader = Shader::from_file(gl::VERTEX_SHADER, v_path).unwrap();
-        let f_shader = Shader::from_file(gl::FRAGMENT_SHADER, f_path).unwrap();
+        let v_shader = match Shader::from_file(gl::VERTEX_SHADER, v_path) {
+            Ok(shader) => shader,
+            Err(error) => return Err(format!("Could not load vertex shader from {:?}\nError: {}", v_path, error)),
+        };
 
-        let program = Program::from_shaders(&[v_shader, f_shader]).unwrap();
+        let f_shader = match Shader::from_file(gl::FRAGMENT_SHADER, f_path) {
+            Ok(shader) => shader,
+            Err(error) => return Err(format!("Could not load fragment shader from {:?}\nError: {}", f_path, error)),
+        };
 
-        program.set_used();
-        self.program = Some(program);
+        let program = Program::from_shaders(&[v_shader, f_shader])?;
+
+        Ok(program)
     }
 
     ///Renders the current frame
-    pub fn render(&self) -> Result<(), &'static str> {
+    pub fn render(&self) -> Result<(), String> {
         //Set and clear view
         unsafe {
             gl::Viewport(
@@ -136,14 +147,14 @@ impl<'a> GraphicsManager<'a> {
 
         //Check and use program
         match self.program {
-            None => return Err("ERROR: OpenGL Program not loaded!"),
+            None => return Err("ERROR: OpenGL Program not loaded!".to_string()),
             Some(ref p) => p.set_used(),
         }
 
         //Check and bind and draw vertices
         match self.vao {
             //VAO = 0: not initialized
-            0 => return Err("ERROR: VAO not initialized!"),
+            0 => return Err("ERROR: VAO not initialized!".to_string()),
             //VAO != 0: ok
             _ => unsafe {
                 gl::BindVertexArray(self.vao);
@@ -261,8 +272,17 @@ impl Shader {
     }
 
     fn from_file(shader_type: gl::types::GLuint, path: &Path) -> Result<Shader, String> {
-        let source = fs::read_to_string(path).unwrap();
-        Shader::from_source(shader_type, &CString::new(source).unwrap())
+        let source = match fs::read_to_string(path) {
+            Ok(contents) => contents,
+            Err(error) => return Err(format!("Could not create shader from {:?}\nError: {}", path, error)),
+        };
+
+        let source_cstring = match CString::new(source) {
+            Ok(cstring) => cstring,
+            Err(error) => return Err(format!("Could not convert shader source to CString: {}", error)),
+        };
+
+        Shader::from_source(shader_type, &source_cstring)
     }
 
     ///Create a new shader from GLSL source (provided as a CString), returns Shader object or

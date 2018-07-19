@@ -1,7 +1,6 @@
+use ron::de;
 use std::fs;
 use std::path::Path;
-
-use ron::de;
 
 #[derive(Debug, Deserialize)]
 pub struct Config {
@@ -16,8 +15,11 @@ pub struct DisplayConfig {
 }
 
 impl Config {
-    pub fn from_file(path: &Path) -> de::Result<Config> {
+    pub fn from_file(path: &Path) -> Result<Config, String> {
         let text = fs::read_to_string(path).unwrap();
-        de::from_str(&text)
+        match de::from_str::<Config>(&text) {
+            Ok(config) => return Ok(config),
+            Err(error) => return Err(format!("Could not load config file from {:?}\nError: {}", path, error)),
+        }
     }
 }
