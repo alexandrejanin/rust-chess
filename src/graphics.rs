@@ -6,6 +6,7 @@ use std::ffi::{CStr, CString};
 use std::fs;
 use std::path::Path;
 
+
 //==================
 // Graphics Manager
 //==================
@@ -71,9 +72,10 @@ impl<'a> GraphicsManager<'a> {
 
         //Triangle vertices
         let vertices: Vec<f32> = vec![
-            -0.5, -0.5, 0.0,
-            0.5, -0.5, 0.0,
-            0.0, 0.5, 0.0
+            //Position          //Colors
+            -0.5, -0.5, 0.0, 1.0, 0.0, 0.0,  //Bottom right
+            0.5, -0.5, 0.0, 0.0, 1.0, 0.0,  //Bottom left
+            0.0, 0.5, 0.0, 0.0, 0.0, 1.0   //Top
         ];
 
         //Create VBO
@@ -95,15 +97,27 @@ impl<'a> GraphicsManager<'a> {
             gl::GenVertexArrays(1, &mut self.vao);
             gl::BindVertexArray(self.vao);
             gl::BindBuffer(gl::ARRAY_BUFFER, vbo);
-            //Vertex location 0
+
+            //Vertex location 0: Position
             gl::EnableVertexAttribArray(0);
             gl::VertexAttribPointer(
                 0, //Location
                 3, //Number of components per vertex
                 gl::FLOAT,
                 gl::FALSE, //Normalize
-                (3 * std::mem::size_of::<f32>()) as gl::types::GLint, //Stride
+                (6 * std::mem::size_of::<f32>()) as gl::types::GLint, //Stride
                 std::ptr::null() //Offset
+            );
+
+            //Vertex location 1: Color
+            gl::EnableVertexAttribArray(1);
+            gl::VertexAttribPointer(
+                1, //Location
+                3, //Number of components per vertex
+                gl::FLOAT,
+                gl::FALSE, //Normalize
+                (6 * std::mem::size_of::<f32>()) as gl::types::GLint, //Stride
+                (3 * std::mem::size_of::<f32>()) as *const gl::types::GLvoid  //Offset
             );
 
             //Unbind
@@ -172,6 +186,7 @@ impl<'a> GraphicsManager<'a> {
         Ok(())
     }
 }
+
 
 //==============
 // Program Type
@@ -247,6 +262,7 @@ impl Program {
         Ok(Program { id: program_id })
     }
 }
+
 
 //=============
 // Shader Type
