@@ -1,16 +1,34 @@
+// Load extern crates
 extern crate gl;
 extern crate ron;
 extern crate sdl2;
 #[macro_use]
 extern crate serde;
 
+use std::path::Path;
+
+// Load local modules
 mod config;
 mod graphics;
 mod input;
+mod resources;
 
+use graphics::manager::GraphicsManager;
+
+
+// Main
 fn main() {
+    //Initialize ResourceLoader
+    let resource_loader = match resources::ResourceLoader::new() {
+        Ok(resource_loader) => resource_loader,
+        Err(error) => {
+            println!("ERROR: Could not initialize ResourceLoader, exiting.\n{:?}", error);
+            return;
+        },
+    };
+
     //Load Configuration from file
-    let conf = match config::Config::from_file(std::path::Path::new("res/config.ron")) {
+    let conf = match config::Config::from_file(&resource_loader, Path::new("res/config.ron")) {
         Ok(conf) => conf,
         Err(error) => {
             println!("ERROR: Could not load config file, exiting.\n{}", error);
@@ -22,10 +40,10 @@ fn main() {
     let sdl = sdl2::init().unwrap();
 
     //Initialize graphics
-    let mut graphics_manager = graphics::GraphicsManager::new(&conf, &sdl);
+    let mut graphics_manager = GraphicsManager::new(&conf, &sdl);
 
-    if let Err(error) = graphics_manager.init() {
-        println!("ERROR: Graphics initialization failed, exiting.\n{}", error);
+    if let Err(error) = graphics_manager.init(&resource_loader) {
+        println!("ERROR: Graphics initialization failed, exiting.\n{:?}", error);
         return;
     };
 

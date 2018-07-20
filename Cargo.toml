@@ -3,6 +3,9 @@ name = "rust-chess-gl"
 version = "0.1.0"
 authors = ["Alexandre Janin <alexandrejanin92@gmail.com>"]
 
+[build-dependencies]
+walkdir = "*"
+
 [dependencies]
 gl = "*"
 ron = "*"

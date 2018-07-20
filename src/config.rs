@@ -1,6 +1,7 @@
 use ron::de;
-use std::fs;
 use std::path::Path;
+
+use resources::ResourceLoader;
 
 #[derive(Debug, Deserialize)]
 pub struct Config {
@@ -15,11 +16,12 @@ pub struct DisplayConfig {
 }
 
 impl Config {
-    pub fn from_file(path: &Path) -> Result<Config, String> {
-        let text = fs::read_to_string(path).unwrap();
-        match de::from_str::<Config>(&text) {
-            Ok(config) => return Ok(config),
-            Err(error) => return Err(format!("Could not load config file from {:?}\nError: {}", path, error)),
-        }
+    ///Load config from .ron file.
+    pub fn from_file(resource_loader: &ResourceLoader, path: &Path) -> Result<Config, String> {
+        let text = resource_loader.load_string(path)
+                                  .map_err(|error| format!("Could not load config from {:?}\nError: {}", path, error))?;
+
+        de::from_str(&text)
+            .map_err(|error| format!("Could not load config from {:?}\nError: {}", path, error))
     }
 }
