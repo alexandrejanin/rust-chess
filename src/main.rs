@@ -1,11 +1,13 @@
 // Load extern crates
 extern crate gl;
+extern crate image;
 extern crate ron;
 extern crate sdl2;
 #[macro_use]
 extern crate serde;
 
 use std::path::Path;
+use std::time;
 
 // Load local modules
 mod config;
@@ -18,6 +20,7 @@ use graphics::manager::GraphicsManager;
 
 // Main
 fn main() {
+
     //Initialize ResourceLoader
     let resource_loader = match resources::ResourceLoader::new() {
         Ok(resource_loader) => resource_loader,
@@ -28,7 +31,7 @@ fn main() {
     };
 
     //Load Configuration from file
-    let conf = match config::Config::from_file(&resource_loader, Path::new("res/config.ron")) {
+    let conf = match config::Config::from_file(&resource_loader, Path::new("config.ron")) {
         Ok(conf) => conf,
         Err(error) => {
             println!("ERROR: Could not load config file, exiting.\n{}", error);
@@ -50,34 +53,56 @@ fn main() {
     //Initialize events
     let mut events = sdl.event_pump().unwrap();
 
+    //Initialize input
     let mut input_manager = input::InputManager::new();
+
+
+    //Load texture
+    let terrain_id = graphics_manager.get_texture(&resource_loader, Path::new("terrain.png")).unwrap();
+
+
+    //Initialize timer
+    let mut last_time = time::SystemTime::now();
+
 
     //Main loop
     'main: loop {
         //Handle events
         for event in events.poll_iter() {
             match event {
-                sdl2::event::Event::Quit { .. } => break 'main,
+                sdl2::event::Event::Quit { timestamp } => break 'main,
+                sdl2::event::Event::Window { timestamp, window_id, win_event } =>
+                    match win_event {
+                        sdl2::event::WindowEvent::SizeChanged(width, height) => graphics_manager.resize(width, height),
+                        //sdl2::event::WindowEvent::Close => break 'main,
+                        _ => {}
+                    },
                 _ => {}
             }
         }
 
-        //Game Logic
-
         input_manager.update(&events);
 
-        if input_manager.get_key_pressed(sdl2::keyboard::Keycode::Space) {
-            println!("Space pressed!");
-        }
+        //Game Logic
+        //...
+        //...
+
+        //Clear
+        graphics_manager.clear();
 
         //Draw
-        let render_result = graphics_manager.render();
-        match render_result {
-            Ok(_) => {},
-            Err(message) => {
-                println!("{}", message);
-                break 'main
-            },
-        }
+        graphics_manager.draw_sprite(terrain_id);
+
+        //Render
+        graphics_manager.render();
+
+        std::thread::sleep(std::time::Duration::from_millis(1));
+
+        //fps
+        let new_time = time::SystemTime::now();
+        let micro_seconds = new_time.duration_since(last_time).unwrap().subsec_micros();
+        let fps = 1_000_000. / micro_seconds as f32;
+        println!("{} fps", fps);
+        last_time = new_time;
     }
 }

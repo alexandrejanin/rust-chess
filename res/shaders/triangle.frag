@@ -2,11 +2,14 @@
 
 in VS_OUTPUT {
     vec3 Color;
+    vec2 TexCoord;
 } IN;
+
+uniform sampler2D Tex;
 
 out vec4 Color;
 
 void main() {
-    Color = vec4(IN.Color, 1.0f);
+    //Flip texture vertically
+    Color = texture(Tex, vec2(IN.TexCoord.x, -IN.TexCoord.y));
 }
-

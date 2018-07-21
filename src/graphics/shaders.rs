@@ -34,15 +34,9 @@ impl Program {
     ///Create Program from vertex and fragment shader paths.
     pub fn load_shaders(resource_loader: &ResourceLoader, v_path: &Path, f_path: &Path) -> Result<Program, Error> {
         //Create shaders and program
-        let v_shader = match Shader::from_file(resource_loader, gl::VERTEX_SHADER, v_path) {
-            Ok(shader) => shader,
-            Err(error) => return Err(Error::ResourceError { path: v_path.into(), message: error.into() }),
-        };
+        let v_shader = Shader::from_file(resource_loader, gl::VERTEX_SHADER, v_path)?;
 
-        let f_shader = match Shader::from_file(resource_loader, gl::FRAGMENT_SHADER, f_path) {
-            Ok(shader) => shader,
-            Err(error) => return Err(Error::ResourceError { path: f_path.into(), message: error.into() }),
-        };
+        let f_shader = Shader::from_file(resource_loader, gl::FRAGMENT_SHADER, f_path)?;
 
         let program = Program::from_shaders(&[v_shader, f_shader])?;
 
@@ -85,14 +79,15 @@ impl Program {
                 );
             }
 
-            return Err(Error::ProgramLinkingFailed {
-                message: error.to_string_lossy().into_owned()
-            });
+            return Err(Error::ProgramLinkingFailed(
+                error.to_string_lossy().into_owned()
+            ));
         }
 
         for shader in shaders {
             unsafe {
                 gl::DetachShader(program_id, shader.id());
+                gl::DeleteShader(shader.id())
             }
         }
 
@@ -125,11 +120,10 @@ impl Shader {
     pub fn from_file(resource_loader: &ResourceLoader, shader_type: gl::types::GLuint, path: &Path) -> Result<Shader, Error> {
         let text = match resource_loader.load_cstring(path) {
             Ok(text) => text,
-            Err(error) => return Err(Error::ResourceError { path: path.into(), message: error.into() }),
+            Err(error) => return Err(Error::ResourceError(error)),
         };
 
         Shader::from_source(shader_type, &text)
-            .map_err(|error| Error::ResourceError { path: path.into(), message: error.into() })
     }
 
     ///Create a new shader from GLSL source (provided as a CString), returns Shader object or OpenGL error log.
@@ -175,13 +169,13 @@ impl Shader {
         }
 
         //Return error log
-        Err(Error::ShaderCompilationFailed {
-            message: error_log.to_string_lossy().into_owned(),
-        })
+        Err(Error::ShaderCompilationFailed(
+            error_log.to_string_lossy().into_owned(),
+        ))
     }
 }
 
-///Creates and returns a `CString` filled with spaces, of length `length`.
+///Creates and returns a CString filled with 'length' spaces.
 fn empty_cstring(length: usize) -> CString {
     let mut buffer: Vec<u8> = Vec::with_capacity(length as usize + 1);
     buffer.extend([b' '].iter().cycle().take(length as usize));
