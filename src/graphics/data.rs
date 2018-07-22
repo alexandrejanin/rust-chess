@@ -1,17 +1,18 @@
 use gl;
+use glm;
 use std;
 
-#[repr(C, packed)]
-pub struct Vector3(pub f32, pub f32, pub f32);
+//#[repr(C, packed)]
+//pub struct Vector3(pub f32, pub f32, pub f32);
 
-#[repr(C, packed)]
-pub struct Vector2(pub f32, pub f32);
+//#[repr(C, packed)]
+//pub struct Vector2(pub f32, pub f32);
 
 #[repr(C, packed)]
 pub struct Vertex {
-    pub position: Vector3,
-    pub color: Vector3,
-    pub uv: Vector2,
+    pub position: glm::Vec3,
+    pub color: glm::Vec3,
+    pub uv: glm::Vec2,
 }
 
 impl Vertex {
@@ -31,7 +32,7 @@ impl Vertex {
             Vertex::attrib_array(
                 stride,
                 1,
-                std::mem::size_of::<Vector3>(),
+                std::mem::size_of::<glm::Vec3>(),
                 3,
             );
 
@@ -39,7 +40,7 @@ impl Vertex {
             Vertex::attrib_array(
                 stride,
                 2,
-                2 * std::mem::size_of::<Vector3>(),
+                2 * std::mem::size_of::<glm::Vec3>(),
                 2,
             );
         }

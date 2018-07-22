@@ -1,4 +1,5 @@
 use gl;
+use glm;
 use sdl2;
 use std;
 use std::path::{Path, PathBuf};
@@ -8,7 +9,7 @@ use config;
 use resources::ResourceLoader;
 use graphics::Error;
 use graphics::shaders::Program;
-use graphics::data::{Mesh, MeshBuilder, Vector2, Vector3, Vertex};
+use graphics::data::{Mesh, MeshBuilder, Vertex};
 
 type TextureID = gl::types::GLuint;
 
@@ -91,10 +92,10 @@ impl<'a> GraphicsManager<'a> {
         //Build quad mesh
         let mesh_builder = MeshBuilder {
             vertices: vec![
-                Vertex { position: Vector3(0.5, 0.5, 0.0), color: Vector3(0.0, 1.0, 0.0), uv: Vector2(1.0, 1.0) },  //Top right,
-                Vertex { position: Vector3(0.5, -0.5, 0.0), color: Vector3(0.0, 0.0, 1.0), uv: Vector2(1.0, 0.0) },  //Bottom right
-                Vertex { position: Vector3(-0.5, -0.5, 0.0), color: Vector3(0.0, 1.0, 0.0), uv: Vector2(0.0, 0.0) },  //Bottom left
-                Vertex { position: Vector3(-0.5, 0.5, 0.0), color: Vector3(0.0, 0.0, 1.0), uv: Vector2(0.0, 1.0) },  //Top left,
+                Vertex { position: glm::vec3(0.5, 0.5, 0.0), color: glm::vec3(0.0, 1.0, 0.0), uv: glm::vec2(1.0, 1.0) },  //Top right,
+                Vertex { position: glm::vec3(0.5, -0.5, 0.0), color: glm::vec3(0.0, 0.0, 1.0), uv: glm::vec2(1.0, 0.0) },  //Bottom right
+                Vertex { position: glm::vec3(-0.5, -0.5, 0.0), color: glm::vec3(0.0, 1.0, 0.0), uv: glm::vec2(0.0, 0.0) },  //Bottom left
+                Vertex { position: glm::vec3(-0.5, 0.5, 0.0), color: glm::vec3(0.0, 0.0, 1.0), uv: glm::vec2(0.0, 1.0) },  //Top left,
             ],
 
             indices: vec![

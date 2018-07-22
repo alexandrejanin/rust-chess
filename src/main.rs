@@ -1,19 +1,23 @@
 // Load extern crates
 extern crate gl;
+extern crate glm;
 extern crate image;
 extern crate ron;
 extern crate sdl2;
 #[macro_use]
 extern crate serde;
 
-use std::path::Path;
-use std::time;
 
 // Load local modules
 mod config;
 mod graphics;
 mod input;
 mod resources;
+
+
+use std::path::Path;
+use std::time;
+
 
 use graphics::manager::GraphicsManager;
 
@@ -74,7 +78,6 @@ fn main() {
                 sdl2::event::Event::Window { timestamp, window_id, win_event } =>
                     match win_event {
                         sdl2::event::WindowEvent::SizeChanged(width, height) => graphics_manager.resize(width, height),
-                        //sdl2::event::WindowEvent::Close => break 'main,
                         _ => {}
                     },
                 _ => {}
