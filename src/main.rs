@@ -1,6 +1,6 @@
 // Load extern crates
 extern crate gl;
-extern crate glm;
+extern crate cgmath;
 extern crate image;
 extern crate ron;
 extern crate sdl2;
@@ -16,7 +16,6 @@ mod resources;
 
 
 use std::path::Path;
-use std::time;
 
 
 use graphics::manager::GraphicsManager;
@@ -24,13 +23,11 @@ use graphics::manager::GraphicsManager;
 
 // Main
 fn main() {
-
     //Initialize ResourceLoader
     let resource_loader = match resources::ResourceLoader::new() {
         Ok(resource_loader) => resource_loader,
         Err(error) => {
-            println!("ERROR: Could not initialize ResourceLoader, exiting.\n{:?}", error);
-            return;
+            panic!("ERROR: Could not initialize ResourceLoader, exiting.\n{}", error);
         },
     };
 
@@ -38,8 +35,7 @@ fn main() {
     let conf = match config::Config::from_file(&resource_loader, Path::new("config.ron")) {
         Ok(conf) => conf,
         Err(error) => {
-            println!("ERROR: Could not load config file, exiting.\n{}", error);
-            return;
+            panic!("ERROR: Could not load config file, exiting.\n{}", error);
         },
     };
 
@@ -50,8 +46,7 @@ fn main() {
     let mut graphics_manager = GraphicsManager::new(&conf, &sdl);
 
     if let Err(error) = graphics_manager.init(&resource_loader) {
-        println!("ERROR: Graphics initialization failed, exiting.\n{:?}", error);
-        return;
+        panic!("ERROR: Graphics initialization failed, exiting.\n{}", error);
     };
 
     //Initialize events
@@ -60,22 +55,21 @@ fn main() {
     //Initialize input
     let mut input_manager = input::InputManager::new();
 
-
     //Load texture
-    let terrain_id = graphics_manager.get_texture(&resource_loader, Path::new("terrain.png")).unwrap();
-
-
-    //Initialize timer
-    let mut last_time = time::SystemTime::now();
-
+    let terrain_id = match graphics_manager.get_texture(&resource_loader, Path::new("terrain.png")) {
+        Ok(id) => id,
+        Err(error) => {
+            panic!("ERROR: Could not load texture \"terrain.png\", exiting. {}", error);
+        },
+    };
 
     //Main loop
     'main: loop {
         //Handle events
         for event in events.poll_iter() {
             match event {
-                sdl2::event::Event::Quit { timestamp } => break 'main,
-                sdl2::event::Event::Window { timestamp, window_id, win_event } =>
+                sdl2::event::Event::Quit { .. } => break 'main,
+                sdl2::event::Event::Window { win_event, .. } =>
                     match win_event {
                         sdl2::event::WindowEvent::SizeChanged(width, height) => graphics_manager.resize(width, height),
                         _ => {}
@@ -94,18 +88,14 @@ fn main() {
         graphics_manager.clear();
 
         //Draw
-        graphics_manager.draw_sprite(terrain_id);
+        if let Err(error) = graphics_manager.draw_sprite(terrain_id) {
+            panic!("Error: Could not draw sprite, exiting. {}", error)
+        };
 
         //Render
         graphics_manager.render();
 
+        //Limit fps
         std::thread::sleep(std::time::Duration::from_millis(1));
-
-        //fps
-        let new_time = time::SystemTime::now();
-        let micro_seconds = new_time.duration_since(last_time).unwrap().subsec_micros();
-        let fps = 1_000_000. / micro_seconds as f32;
-        println!("{} fps", fps);
-        last_time = new_time;
     }
 }

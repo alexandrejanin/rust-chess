@@ -1,18 +1,16 @@
+use cgmath::{Matrix4, Vector2, Vector3};
 use gl;
-use glm;
 use std;
 
-//#[repr(C, packed)]
-//pub struct Vector3(pub f32, pub f32, pub f32);
+pub type Vector2f = Vector2<f32>;
+pub type Vector3f = Vector3<f32>;
+pub type Matrix4f = Matrix4<f32>;
 
-//#[repr(C, packed)]
-//pub struct Vector2(pub f32, pub f32);
-
+#[derive(Clone, Copy)]
 #[repr(C, packed)]
 pub struct Vertex {
-    pub position: glm::Vec3,
-    pub color: glm::Vec3,
-    pub uv: glm::Vec2,
+    pub position: Vector3f,
+    pub uv: Vector2f,
 }
 
 impl Vertex {
@@ -27,20 +25,11 @@ impl Vertex {
                 0,
                 3,
             );
-
             //Color
             Vertex::attrib_array(
                 stride,
                 1,
-                std::mem::size_of::<glm::Vec3>(),
-                3,
-            );
-
-            //Color
-            Vertex::attrib_array(
-                stride,
-                2,
-                2 * std::mem::size_of::<glm::Vec3>(),
+                std::mem::size_of::<Vector3f>(),
                 2,
             );
         }
@@ -62,6 +51,7 @@ impl Vertex {
 
 
 ///Represents a mesh that is loaded in OpenGL.
+#[derive(Clone, Copy)]
 pub struct Mesh {
     vao: gl::types::GLuint,
     ebo: gl::types::GLuint,
@@ -82,6 +72,7 @@ pub struct MeshBuilder {
 }
 
 impl MeshBuilder {
+    ///Initializes an empty MeshBuilder.
     pub fn new() -> MeshBuilder {
         MeshBuilder { vertices: Vec::new(), indices: Vec::new() }
     }

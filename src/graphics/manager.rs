@@ -1,17 +1,50 @@
 use gl;
-use glm;
+use cgmath::One;
 use sdl2;
 use std;
+use std::fmt::{self, Display, Formatter};
 use std::path::{Path, PathBuf};
 use std::collections::HashMap;
 
 use config;
-use resources::ResourceLoader;
-use graphics::Error;
-use graphics::shaders::Program;
-use graphics::data::{Mesh, MeshBuilder, Vertex};
+use resources::{self, ResourceLoader};
+use super::{
+    data::{Mesh, MeshBuilder, Vertex, Matrix4f, Vector2f, Vector3f},
+    shaders::{self, Program},
+};
 
 type TextureID = gl::types::GLuint;
+
+
+///Error related to OpenGL drawing.
+pub enum DrawingError {
+    ResourceError(resources::ResourceError),
+    ///Error related to OpenGL shaders.
+    ShaderError(shaders::ShaderError),
+    ///Default quad mesh not initialized.
+    QuadMeshNotInitialized,
+    ///Tried drawing a mesh that had no EBO set.
+    MeshEBONotInitialized,
+    ///Tried drawing a mesh that had no EBO set.
+    MeshVAONotInitialized,
+    ///No OpenGL program loaded.
+    ProgramNotInitialized,
+}
+
+impl Display for DrawingError {
+    fn fmt(&self, f: &mut Formatter) -> fmt::Result {
+        write!(f, "Drawing failed: ")?;
+        match self {
+            DrawingError::ResourceError(error) => write!(f, "{}", error),
+            DrawingError::ShaderError(error) => write!(f, "{}", error),
+            DrawingError::QuadMeshNotInitialized => write!(f, "Quad mesh not initialized"),
+            DrawingError::MeshEBONotInitialized => write!(f, "Mesh EBO not initialized"),
+            DrawingError::MeshVAONotInitialized => write!(f, "Mesh VAO not initialized"),
+            DrawingError::ProgramNotInitialized => write!(f, "Program not initialized"),
+        }
+    }
+}
+
 
 ///Manages everything related to graphics and rendering.
 pub struct GraphicsManager<'a> {
@@ -24,6 +57,7 @@ pub struct GraphicsManager<'a> {
     textures: HashMap<PathBuf, TextureID>,
     quad: Option<Mesh>,
 }
+
 
 impl<'a> GraphicsManager<'a> {
     ///Initializes graphics from SDL and Config object
@@ -71,7 +105,7 @@ impl<'a> GraphicsManager<'a> {
 
 
     ///Initializes graphics. Must be ran once before any rendering is done.
-    pub fn init(&mut self, resources_loader: &ResourceLoader) -> Result<(), Error> {
+    pub fn init(&mut self, resources_loader: &ResourceLoader) -> Result<(), DrawingError> {
         //Enable depth testing
         unsafe {
             gl::Enable(gl::DEPTH_TEST);
@@ -81,7 +115,7 @@ impl<'a> GraphicsManager<'a> {
         //Load shaders
         self.program = match Program::load_shaders(resources_loader, Path::new("shaders/triangle.vert"), Path::new("shaders/triangle.frag")) {
             Ok(program) => Some(program),
-            Err(error) => return Err(error),
+            Err(error) => return Err(DrawingError::ShaderError(error)),
         };
 
         //Set GL clear color
@@ -92,10 +126,10 @@ impl<'a> GraphicsManager<'a> {
         //Build quad mesh
         let mesh_builder = MeshBuilder {
             vertices: vec![
-                Vertex { position: glm::vec3(0.5, 0.5, 0.0), color: glm::vec3(0.0, 1.0, 0.0), uv: glm::vec2(1.0, 1.0) },  //Top right,
-                Vertex { position: glm::vec3(0.5, -0.5, 0.0), color: glm::vec3(0.0, 0.0, 1.0), uv: glm::vec2(1.0, 0.0) },  //Bottom right
-                Vertex { position: glm::vec3(-0.5, -0.5, 0.0), color: glm::vec3(0.0, 1.0, 0.0), uv: glm::vec2(0.0, 0.0) },  //Bottom left
-                Vertex { position: glm::vec3(-0.5, 0.5, 0.0), color: glm::vec3(0.0, 0.0, 1.0), uv: glm::vec2(0.0, 1.0) },  //Top left,
+                Vertex { position: Vector3f::new(0.5, 0.5, 0.0), uv: Vector2f::new(1.0, 1.0) },  //Top right,
+                Vertex { position: Vector3f::new(0.5, -0.5, 0.0), uv: Vector2f::new(1.0, 0.0) },  //Bottom right
+                Vertex { position: Vector3f::new(-0.5, -0.5, 0.0), uv: Vector2f::new(0.0, 0.0) },  //Bottom left
+                Vertex { position: Vector3f::new(-0.5, 0.5, 0.0), uv: Vector2f::new(0.0, 1.0) },  //Top left,
             ],
 
             indices: vec![
@@ -122,7 +156,7 @@ impl<'a> GraphicsManager<'a> {
 
 
     ///Gets texture id for given path, loading if it wasn't loaded yet.
-    pub fn get_texture(&mut self, resource_loader: &ResourceLoader, path: &Path) -> Result<TextureID, Error> {
+    pub fn get_texture(&mut self, resource_loader: &ResourceLoader, path: &Path) -> Result<TextureID, DrawingError> {
         //Find texture if it's loaded already
         match self.textures.get(path) {
             Some(texture_id) => return Ok(*texture_id),
@@ -135,9 +169,9 @@ impl<'a> GraphicsManager<'a> {
 
 
     ///Loads texture from file in "res". Returns OpenGL texture id.
-    fn load_texture(&mut self, resource_loader: &ResourceLoader, path: &Path) -> Result<TextureID, Error> {
+    fn load_texture(&mut self, resource_loader: &ResourceLoader, path: &Path) -> Result<TextureID, DrawingError> {
         //Load image
-        let image = resource_loader.load_png(path)?;
+        let image = resource_loader.load_png(path).map_err(|error| DrawingError::ResourceError(error))?;
 
         //Get image size
         let (width, height) = image.dimensions();
@@ -208,44 +242,47 @@ impl<'a> GraphicsManager<'a> {
 
 
     ///Draw textured quad
-    pub fn draw_sprite(&self, texture: TextureID) -> Result<(), String> {
+    pub fn draw_sprite(&mut self, texture: TextureID) -> Result<(), DrawingError> {
         match self.quad {
-            Some(ref quad) => self.draw_mesh(quad, texture),
-            None => Err(String::from("ERROR: Quad mesh not initialized")),
+            None => Err(DrawingError::QuadMeshNotInitialized),
+            Some(quad) => self.draw_mesh(quad, texture),
         }
     }
 
 
-    ///Draw textured quad
-    pub fn draw_mesh(&self, mesh: &Mesh, texture: TextureID) -> Result<(), String> {
-        //Bind texture
+    ///Draw textured mesh
+    pub fn draw_mesh(&mut self, mesh: Mesh, texture: TextureID) -> Result<(), DrawingError> {
+        //Check that mesh is valid
+        if mesh.ebo() == 0 { return Err(DrawingError::MeshEBONotInitialized) }
+        if mesh.vao() == 0 { return Err(DrawingError::MeshVAONotInitialized) }
+
+        //Check program
+        let program = match self.program {
+            Some(ref mut p) => p,
+            None => return Err(DrawingError::ProgramNotInitialized),
+        };
+
+        //Use program
+        program.set_used();
+
+        //Set transform matrix
+        let transform = Matrix4f::one();
+        program.set_mat4("transform", &transform);
+
         unsafe {
+            //Bind texture
             gl::BindTexture(gl::TEXTURE_2D, texture);
-        }
 
-        //Check and use program
-        match self.program {
-            Some(ref p) => p.set_used(),
-            None => return Err("ERROR: OpenGL Program not loaded!".to_string()),
-        }
+            //Bind mesh
+            gl::BindVertexArray(mesh.vao());
+            gl::BindBuffer(gl::ELEMENT_ARRAY_BUFFER, mesh.ebo());
 
-        //Check and bind and draw vertices
-        match mesh.ebo() {
-            //EBO == 0: not initialized
-            0 => return Err("ERROR: Quad EBO not initialized!".to_string()),
-            //EBO != 0: ok
-            _ => unsafe {
-                //Bind mesh
-                gl::BindVertexArray(mesh.vao());
-                gl::BindBuffer(gl::ELEMENT_ARRAY_BUFFER, mesh.ebo());
-
-                gl::DrawElements(
-                    gl::TRIANGLES, //Draw mode
-                    mesh.indices_count() as i32, //Number of indices
-                    gl::UNSIGNED_INT,
-                    0 as *const gl::types::GLvoid, //Starting index
-                );
-            },
+            gl::DrawElements(
+                gl::TRIANGLES, //Draw mode
+                mesh.indices_count() as i32, //Number of indices
+                gl::UNSIGNED_INT,
+                0 as *const gl::types::GLvoid, //Starting index
+            );
         }
 
         //Unbind everything

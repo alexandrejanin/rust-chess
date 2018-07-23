@@ -1,38 +1,92 @@
 use gl;
+use cgmath::Matrix;
 use std;
+use std::collections::HashMap;
+use std::fmt::{self, Display, Formatter};
 use std::ffi::{CStr, CString};
 use std::path::Path;
 
-use resources::ResourceLoader;
+use super::data;
+use resources::{self, ResourceLoader};
 
-use graphics::Error;
+///Error related to shaders.
+pub enum ShaderError {
+    ///An error related to resources handling.
+    ResourceError(resources::ResourceError),
+    ///OpenGL Shader could not compile. Contains OpenGL Error log.
+    ShaderCompilationFailed(String),
+    ///OpenGL Program could not link. Contains OpenGL Error log.
+    ProgramLinkingFailed(String),
+}
+
+impl Display for ShaderError {
+    fn fmt(&self, f: &mut Formatter) -> fmt::Result {
+        write!(f, "Shader error: ")?;
+        match self {
+            ShaderError::ResourceError(error) => write!(f, "{}", error),
+            ShaderError::ShaderCompilationFailed(message) => write!(f, "Shader could not compile: {}", message),
+            ShaderError::ProgramLinkingFailed(message) => write!(f, "Program could not link: {}", message),
+        }
+    }
+}
+
 
 ///Represents an OpenGL Shader Program.
 pub struct Program {
-    id: gl::types::GLuint,
+    program_id: gl::types::GLuint,
+    uniform_locs: HashMap<String, gl::types::GLint>,
 }
+
 
 impl Drop for Program {
     fn drop(&mut self) {
         unsafe {
-            gl::DeleteProgram(self.id);
+            gl::DeleteProgram(self.id());
         }
     }
 }
 
+
 impl Program {
-    fn id(&self) -> gl::types::GLuint {
-        self.id
+    pub fn id(&self) -> gl::types::GLuint {
+        self.program_id
     }
 
     pub fn set_used(&self) {
         unsafe {
-            gl::UseProgram(self.id);
+            gl::UseProgram(self.id());
         }
     }
 
+    ///Attempts to set uniform mat4. Returns success value.
+    pub fn set_mat4(&mut self, name: &str, mat4: &data::Matrix4f) -> bool {
+        let loc = self.get_uniform_location(name);
+        if loc == -1 { return false }
+
+        unsafe { gl::UniformMatrix4fv(loc, 1, gl::FALSE, mat4.as_ptr()); }
+
+        true
+    }
+
+    ///Returns uniform location in program from uniform name.
+    fn get_uniform_location(&mut self, name: &str) -> gl::types::GLint {
+        let loc = match self.uniform_locs.get(name) {
+            Some(loc) => return *loc,
+            None => {
+                let uniform_name = CString::new(name).unwrap();
+                unsafe {
+                    gl::GetUniformLocation(self.id(), uniform_name.as_ptr())
+                }
+            },
+        };
+
+        self.uniform_locs.insert(name.into(), loc);
+
+        loc
+    }
+
     ///Create Program from vertex and fragment shader paths.
-    pub fn load_shaders(resource_loader: &ResourceLoader, v_path: &Path, f_path: &Path) -> Result<Program, Error> {
+    pub fn load_shaders(resource_loader: &ResourceLoader, v_path: &Path, f_path: &Path) -> Result<Program, ShaderError> {
         //Create shaders and program
         let v_shader = Shader::from_file(resource_loader, gl::VERTEX_SHADER, v_path)?;
 
@@ -44,7 +98,7 @@ impl Program {
     }
 
     ///Create Program from Shaders.
-    fn from_shaders(shaders: &[Shader]) -> Result<Program, Error> {
+    fn from_shaders(shaders: &[Shader]) -> Result<Program, ShaderError> {
         let program_id = unsafe { gl::CreateProgram() };
 
         for shader in shaders {
@@ -79,7 +133,7 @@ impl Program {
                 );
             }
 
-            return Err(Error::ProgramLinkingFailed(
+            return Err(ShaderError::ProgramLinkingFailed(
                 error.to_string_lossy().into_owned()
             ));
         }
@@ -91,7 +145,7 @@ impl Program {
             }
         }
 
-        Ok(Program { id: program_id })
+        Ok(Program { program_id, uniform_locs: HashMap::new() })
     }
 }
 
@@ -117,10 +171,10 @@ impl Shader {
 
     ///Creates shader from source file.
     ///shader_type: usually gl::VERTEX_SHADER or gl::FRAGMENT_SHADER
-    pub fn from_file(resource_loader: &ResourceLoader, shader_type: gl::types::GLuint, path: &Path) -> Result<Shader, Error> {
+    pub fn from_file(resource_loader: &ResourceLoader, shader_type: gl::types::GLuint, path: &Path) -> Result<Shader, ShaderError> {
         let text = match resource_loader.load_cstring(path) {
             Ok(text) => text,
-            Err(error) => return Err(Error::ResourceError(error)),
+            Err(error) => return Err(ShaderError::ResourceError(error)),
         };
 
         Shader::from_source(shader_type, &text)
@@ -128,7 +182,7 @@ impl Shader {
 
     ///Create a new shader from GLSL source (provided as a CString), returns Shader object or OpenGL error log.
     ///shader_type: usually gl::VERTEX_SHADER or gl::FRAGMENT_SHADER
-    fn from_source(shader_type: gl::types::GLuint, source: &CStr) -> Result<Shader, Error> {
+    fn from_source(shader_type: gl::types::GLuint, source: &CStr) -> Result<Shader, ShaderError> {
         //Create shader and get ID
         let id = unsafe { gl::CreateShader(shader_type) };
 
@@ -169,7 +223,7 @@ impl Shader {
         }
 
         //Return error log
-        Err(Error::ShaderCompilationFailed(
+        Err(ShaderError::ShaderCompilationFailed(
             error_log.to_string_lossy().into_owned(),
         ))
     }

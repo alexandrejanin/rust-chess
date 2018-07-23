@@ -19,7 +19,7 @@ impl Config {
     ///Load config from .ron file.
     pub fn from_file(resource_loader: &ResourceLoader, path: &Path) -> Result<Config, String> {
         let text = resource_loader.load_string(path)
-                                  .map_err(|error| format!("Could not load config from {:?}\nError: {}", path, String::from(error)))?;
+                                  .map_err(|error| format!("Could not load config from {:?}\nError: {}", path, error))?;
 
         de::from_str(&text)
             .map_err(|error| format!("Could not load config from {:?}\nError: {}", path, error))

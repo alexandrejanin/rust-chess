@@ -2,13 +2,14 @@ use image;
 
 use std;
 use std::ffi;
+use std::fmt::{self, Display, Formatter};
 use std::fs::{self, File};
 use std::io::{self, Read};
 use std::path::{Path, PathBuf};
 
 #[derive(Debug)]
 ///Errors related to resource loading.
-pub enum Error {
+pub enum ResourceError {
     ///The ResourceLoader could not find the path to the current executable.
     ExecutablePathNotFound,
     FileContainsNullByte(PathBuf),
@@ -16,25 +17,25 @@ pub enum Error {
     Image(image::ImageError),
 }
 
-impl From<io::Error> for Error {
+impl From<io::Error> for ResourceError {
     fn from(error: io::Error) -> Self {
-        Error::Io(error)
+        ResourceError::Io(error)
     }
 }
 
-impl From<image::ImageError> for Error {
+impl From<image::ImageError> for ResourceError {
     fn from(error: image::ImageError) -> Self {
-        Error::Image(error)
+        ResourceError::Image(error)
     }
 }
 
-impl From<Error> for String {
-    fn from(error: Error) -> Self {
-        match error {
-            Error::ExecutablePathNotFound => format!("Error: Could not locate executable path."),
-            Error::FileContainsNullByte(path) => format!("Error: File \"{:?}\" contains a null byte.", path),
-            Error::Io(error) => format!("{}", error),
-            Error::Image(error) => format!("{}", error),
+impl Display for ResourceError {
+    fn fmt(&self, f: &mut Formatter) -> fmt::Result {
+        match self {
+            ResourceError::ExecutablePathNotFound => write!(f, "Error: Could not locate executable path."),
+            ResourceError::FileContainsNullByte(path) => write!(f, "Error: File \"{:?}\" contains a null byte.", path),
+            ResourceError::Io(error) => write!(f, "{}", error),
+            ResourceError::Image(error) => write!(f, "{}", error),
         }
     }
 }
@@ -46,13 +47,13 @@ pub struct ResourceLoader {
 
 impl ResourceLoader {
     ///Attempts to create a new ResourceLoader for the current folder.
-    pub fn new() -> Result<ResourceLoader, Error> {
+    pub fn new() -> Result<ResourceLoader, ResourceError> {
         //Get path to executable
         let executable_name = std::env::current_exe()
-            .map_err(|_| Error::ExecutablePathNotFound)?;
+            .map_err(|_| ResourceError::ExecutablePathNotFound)?;
 
         //Get parent dir
-        let executable_dir = executable_name.parent().ok_or(Error::ExecutablePathNotFound)?;
+        let executable_dir = executable_name.parent().ok_or(ResourceError::ExecutablePathNotFound)?;
 
         //Get resources dir
         let res_dir = executable_dir.join(Path::new("res"));
@@ -72,16 +73,16 @@ impl ResourceLoader {
     }
 
     ///Load image from PNG file.
-    pub fn load_png(&self, path: &Path) -> Result<image::RgbaImage, Error> {
+    pub fn load_png(&self, path: &Path) -> Result<image::RgbaImage, ResourceError> {
         let path = self.get_path(path);
         match image::open(path) {
             Ok(img) => Ok(img.to_rgba()),
-            Err(error) => Err(Error::Image(error)),
+            Err(error) => Err(ResourceError::Image(error)),
         }
     }
 
     ///Load String from file.
-    pub fn load_string(&self, path: &Path) -> Result<String, Error> {
+    pub fn load_string(&self, path: &Path) -> Result<String, ResourceError> {
         //Open file
         let mut file = self.get_file(path)?;
 
@@ -95,7 +96,7 @@ impl ResourceLoader {
     }
 
     ///Load CString from file, making sure that it doesn't contain a null byte.
-    pub fn load_cstring(&self, path: &Path) -> Result<ffi::CString, Error> {
+    pub fn load_cstring(&self, path: &Path) -> Result<ffi::CString, ResourceError> {
         //Open file
         let mut file = self.get_file(path)?;
 
@@ -109,7 +110,7 @@ impl ResourceLoader {
 
         //If buffer contains null byte, return error
         if buffer.iter().find(|i| **i == 0).is_some() {
-            return Err(Error::FileContainsNullByte(path.into()));
+            return Err(ResourceError::FileContainsNullByte(path.into()));
         }
 
         //Otherwise, return CString from buffer
