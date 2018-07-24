@@ -9,26 +9,33 @@ use std::collections::HashMap;
 use config;
 use resources::{self, ResourceLoader};
 use super::{
-    data::{Mesh, MeshBuilder, Vertex, Matrix4f, Vector2f, Vector3f},
+    TextureID, Matrix4f, Vector2f, Vector3f,
+    mesh::{Mesh, MeshBuilder, Vertex},
     shaders::{self, Program},
 };
-
-type TextureID = gl::types::GLuint;
-
 
 ///Error related to OpenGL drawing.
 pub enum DrawingError {
     ResourceError(resources::ResourceError),
     ///Error related to OpenGL shaders.
     ShaderError(shaders::ShaderError),
-    ///Default quad mesh not initialized.
-    QuadMeshNotInitialized,
     ///Tried drawing a mesh that had no EBO set.
     MeshEBONotInitialized,
     ///Tried drawing a mesh that had no EBO set.
     MeshVAONotInitialized,
-    ///No OpenGL program loaded.
-    ProgramNotInitialized,
+}
+
+//TODO: impl From<> for other errors
+impl From<resources::ResourceError> for DrawingError {
+    fn from(error: resources::ResourceError) -> Self {
+        DrawingError::ResourceError(error)
+    }
+}
+
+impl From<shaders::ShaderError> for DrawingError {
+    fn from(error: shaders::ShaderError) -> Self {
+        DrawingError::ShaderError(error)
+    }
 }
 
 impl Display for DrawingError {
@@ -37,31 +44,42 @@ impl Display for DrawingError {
         match self {
             DrawingError::ResourceError(error) => write!(f, "{}", error),
             DrawingError::ShaderError(error) => write!(f, "{}", error),
-            DrawingError::QuadMeshNotInitialized => write!(f, "Quad mesh not initialized"),
             DrawingError::MeshEBONotInitialized => write!(f, "Mesh EBO not initialized"),
             DrawingError::MeshVAONotInitialized => write!(f, "Mesh VAO not initialized"),
-            DrawingError::ProgramNotInitialized => write!(f, "Program not initialized"),
         }
     }
 }
 
 
+///Represents part of a 2d texture used as a sprite.
+#[derive(Copy, Clone)]
+pub struct Sprite {
+    ///ID of the texture to get sprite from.
+    pub texture_id: TextureID,
+    ///Upper left corner of sprite on texture (values in the range [0, 1]).
+    pub src_position: Vector2f,
+    ///Size of the sprite on texture (values in the range [0, 1]).
+    pub src_size: Vector2f,
+}
+
+
 ///Manages everything related to graphics and rendering.
 pub struct GraphicsManager<'a> {
+    resource_loader: &'a ResourceLoader,
     conf: &'a config::Config,
     sdl: &'a sdl2::Sdl,
     video: sdl2::VideoSubsystem,
     window: sdl2::video::Window,
     gl_context: sdl2::video::GLContext,
-    program: Option<Program>,
+    program: Program,
+    quad: Mesh,
     textures: HashMap<PathBuf, TextureID>,
-    quad: Option<Mesh>,
 }
 
 
 impl<'a> GraphicsManager<'a> {
     ///Initializes graphics from SDL and Config object
-    pub fn new(conf: &'a config::Config, sdl: &'a sdl2::Sdl) -> GraphicsManager<'a> {
+    pub fn new(resource_loader: &'a ResourceLoader, conf: &'a config::Config, sdl: &'a sdl2::Sdl) -> Result<GraphicsManager<'a>, DrawingError> {
         //Initialize VideoSubsystem
         let video = sdl.video().unwrap();
 
@@ -90,38 +108,15 @@ impl<'a> GraphicsManager<'a> {
             false => sdl2::video::SwapInterval::Immediate,
         });
 
-        //Build and return GraphicsManager
-        GraphicsManager {
-            conf,
-            sdl,
-            video,
-            window,
-            gl_context,
-            program: None,
-            textures: HashMap::new(),
-            quad: None,
-        }
-    }
-
-
-    ///Initializes graphics. Must be ran once before any rendering is done.
-    pub fn init(&mut self, resources_loader: &ResourceLoader) -> Result<(), DrawingError> {
-        //Enable depth testing
+        //Enable depth testing, set clear color
         unsafe {
             gl::Enable(gl::DEPTH_TEST);
             gl::DepthFunc(gl::LESS);
+            gl::ClearColor(0.3, 0.3, 0.5, 1.0);
         }
 
         //Load shaders
-        self.program = match Program::load_shaders(resources_loader, Path::new("shaders/triangle.vert"), Path::new("shaders/triangle.frag")) {
-            Ok(program) => Some(program),
-            Err(error) => return Err(DrawingError::ShaderError(error)),
-        };
-
-        //Set GL clear color
-        unsafe {
-            gl::ClearColor(0.3, 0.3, 0.5, 1.0);
-        }
+        let program = Program::load_shaders(resource_loader, Path::new("shaders/triangle.vert"), Path::new("shaders/triangle.frag"))?;
 
         //Build quad mesh
         let mesh_builder = MeshBuilder {
@@ -138,52 +133,55 @@ impl<'a> GraphicsManager<'a> {
             ],
         };
 
-        self.quad = Some(mesh_builder.build());
+        let quad = mesh_builder.build();
 
-        //Texture parameters
-        unsafe {
-            //Texture wrapping
-            gl::TexParameteri(gl::TEXTURE_2D, gl::TEXTURE_WRAP_S, gl::MIRRORED_REPEAT as gl::types::GLint);
-            gl::TexParameteri(gl::TEXTURE_2D, gl::TEXTURE_WRAP_T, gl::MIRRORED_REPEAT as gl::types::GLint);
-
-            //Texture filtering
-            gl::TexParameteri(gl::TEXTURE_2D, gl::TEXTURE_MIN_FILTER, gl::NEAREST_MIPMAP_NEAREST as gl::types::GLint);
-            gl::TexParameteri(gl::TEXTURE_2D, gl::TEXTURE_MAG_FILTER, gl::NEAREST as gl::types::GLint);
-        }
-
-        Ok(())
+        //Build and return graphics manager
+        Ok(GraphicsManager {
+            resource_loader,
+            conf,
+            sdl,
+            video,
+            window,
+            gl_context,
+            program,
+            quad,
+            textures: HashMap::new(),
+        })
     }
 
+    pub fn new_sprite(&mut self, texture_path: &Path) -> Result<Sprite, DrawingError> {
+        let texture_id = self.get_texture(texture_path)?;
+
+        Ok(Sprite {
+            texture_id,
+            //TODO add those variables as parameters
+            src_position: Vector2f::new(3. / 16., 1.0),
+            src_size: Vector2f::new(1. / 16., 1. / 16.),
+        })
+    }
 
     ///Gets texture id for given path, loading if it wasn't loaded yet.
-    pub fn get_texture(&mut self, resource_loader: &ResourceLoader, path: &Path) -> Result<TextureID, DrawingError> {
-        //Find texture if it's loaded already
-        match self.textures.get(path) {
-            Some(texture_id) => return Ok(*texture_id),
-            None => {},
+    fn get_texture(&mut self, path: &Path) -> Result<TextureID, DrawingError> {
+        //Return texture id if it's loaded already
+        if let Some(texture_id) = self.textures.get(path) {
+            return Ok(*texture_id)
         };
 
         //Texture wasn't found, load it
-        self.load_texture(resource_loader, path)
-    }
-
-
-    ///Loads texture from file in "res". Returns OpenGL texture id.
-    fn load_texture(&mut self, resource_loader: &ResourceLoader, path: &Path) -> Result<TextureID, DrawingError> {
-        //Load image
-        let image = resource_loader.load_png(path).map_err(|error| DrawingError::ResourceError(error))?;
+        let image = self.resource_loader.load_png(path)?;
 
         //Get image size
         let (width, height) = image.dimensions();
 
         //Allocate texture
-        let mut texture: TextureID = 0;
+        let mut texture_id: TextureID = 0;
 
         unsafe {
-            gl::GenTextures(1, &mut texture);
+            //Create texture
+            gl::GenTextures(1, &mut texture_id);
 
             //Bind texture
-            gl::BindTexture(gl::TEXTURE_2D, texture);
+            gl::BindTexture(gl::TEXTURE_2D, texture_id);
 
             //Fill texture
             gl::TexImage2D(
@@ -198,6 +196,14 @@ impl<'a> GraphicsManager<'a> {
                 image.as_ptr() as *const std::os::raw::c_void,
             );
 
+            //Texture wrapping
+            gl::TexParameteri(gl::TEXTURE_2D, gl::TEXTURE_WRAP_S, gl::REPEAT as gl::types::GLint);
+            gl::TexParameteri(gl::TEXTURE_2D, gl::TEXTURE_WRAP_T, gl::REPEAT as gl::types::GLint);
+
+            //Texture filtering
+            gl::TexParameteri(gl::TEXTURE_2D, gl::TEXTURE_MIN_FILTER, gl::NEAREST_MIPMAP_NEAREST as gl::types::GLint);
+            gl::TexParameteri(gl::TEXTURE_2D, gl::TEXTURE_MAG_FILTER, gl::NEAREST as gl::types::GLint);
+
             //Generate mipmaps
             gl::GenerateMipmap(gl::TEXTURE_2D);
 
@@ -206,9 +212,9 @@ impl<'a> GraphicsManager<'a> {
         }
 
         //Save texture so we don't have to load it again
-        self.textures.insert(path.into(), texture);
+        self.textures.insert(path.into(), texture_id);
 
-        Ok(texture)
+        Ok(texture_id)
     }
 
 
@@ -242,36 +248,31 @@ impl<'a> GraphicsManager<'a> {
 
 
     ///Draw textured quad
-    pub fn draw_sprite(&mut self, texture: TextureID) -> Result<(), DrawingError> {
-        match self.quad {
-            None => Err(DrawingError::QuadMeshNotInitialized),
-            Some(quad) => self.draw_mesh(quad, texture),
-        }
+    pub fn draw_sprite(&mut self, sprite: Sprite) -> Result<(), DrawingError> {
+        let quad = self.quad;
+        self.draw_mesh(quad, sprite)
     }
 
 
     ///Draw textured mesh
-    pub fn draw_mesh(&mut self, mesh: Mesh, texture: TextureID) -> Result<(), DrawingError> {
+    pub fn draw_mesh(&mut self, mesh: Mesh, sprite: Sprite) -> Result<(), DrawingError> {
         //Check that mesh is valid
-        if mesh.ebo() == 0 { return Err(DrawingError::MeshEBONotInitialized) }
-        if mesh.vao() == 0 { return Err(DrawingError::MeshVAONotInitialized) }
-
-        //Check program
-        let program = match self.program {
-            Some(ref mut p) => p,
-            None => return Err(DrawingError::ProgramNotInitialized),
-        };
+        mesh.check()?;
 
         //Use program
-        program.set_used();
+        self.program.set_used();
 
         //Set transform matrix
         let transform = Matrix4f::one();
-        program.set_mat4("transform", &transform);
+        self.program.set_mat4("transform", &transform);
+
+        //Set sprite coordinates
+        self.program.set_vec2("SourcePosition", sprite.src_position);
+        self.program.set_vec2("SourceSize", sprite.src_size);
 
         unsafe {
             //Bind texture
-            gl::BindTexture(gl::TEXTURE_2D, texture);
+            gl::BindTexture(gl::TEXTURE_2D, sprite.texture_id);
 
             //Bind mesh
             gl::BindVertexArray(mesh.vao());

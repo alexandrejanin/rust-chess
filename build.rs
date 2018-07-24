@@ -16,7 +16,7 @@ fn main() {
         overwrite: true,
         skip_exist: false,
         buffer_size: 64_000,
-        copy_inside: false,
+        copy_inside: true,
         depth: 0
     };
 
@@ -28,39 +28,21 @@ fn main() {
     };
 
     //Copy res directory
-    fs_extra::dir::copy(
+    fs_extra::dir::remove(&executable_path.join("res"));
+    if let Err(error) = fs_extra::dir::copy(
         &manifest_dir.join("res"),
         &executable_path.join("res"),
         &dir_options,
-    );
+    ) {
+        panic!("Error: Could not copy 'res' folder.\n{}", error)
+    }
 
     //Copy DLL
-    fs_extra::file::copy(
+    if let Err(error) = fs_extra::file::copy(
         &manifest_dir.join("bin/SDL2.dll"),
         &executable_path.join("SDL2.dll"),
         &file_options,
-    );
-}
-
-//Copies file or folder from one place to another.
-/*fn copy(from: &Path, to: &Path) {
-    let from_path: PathBuf = from.into();
-    let to_path: PathBuf = to.into();
-
-    for entry in WalkDir::new(from_path.clone()) {
-        let entry = entry.unwrap();
-
-        if let Ok(rel_path) = entry.path().strip_prefix(&from_path) {
-            let target_path = to_path.join(rel_path);
-
-            if entry.file_type().is_dir() {
-                DirBuilder::new()
-                    .recursive(true)
-                    .create(target_path).expect("failed to create target dir");
-            } else {
-                fs::copy(entry.path(), &target_path).expect("failed to copy");
-            }
-        }
+    ) {
+        panic!("Error: Could not copy 'SDL2.dll'.\n{}", error)
     }
-}*/
-
+}

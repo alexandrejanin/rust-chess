@@ -1,10 +1,10 @@
-use cgmath::{Matrix4, Vector2, Vector3};
 use gl;
 use std;
 
-pub type Vector2f = Vector2<f32>;
-pub type Vector3f = Vector3<f32>;
-pub type Matrix4f = Matrix4<f32>;
+use super::{
+    Vector2f, Vector3f,
+    manager::DrawingError
+};
 
 #[derive(Clone, Copy)]
 #[repr(C, packed)]
@@ -64,6 +64,13 @@ impl Mesh {
     pub fn ebo(&self) -> gl::types::GLuint { self.ebo }
     pub fn vertex_count(&self) -> usize { self.vertex_count }
     pub fn indices_count(&self) -> usize { self.indices_count }
+
+    pub fn check(&self) -> Result<(), DrawingError> {
+        if self.ebo == 0 { return Err(DrawingError::MeshEBONotInitialized) }
+        if self.vao == 0 { return Err(DrawingError::MeshVAONotInitialized) }
+
+        Ok(())
+    }
 }
 
 pub struct MeshBuilder {

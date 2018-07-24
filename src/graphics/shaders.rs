@@ -1,12 +1,12 @@
 use gl;
-use cgmath::Matrix;
+use cgmath::{Array, Matrix};
 use std;
 use std::collections::HashMap;
 use std::fmt::{self, Display, Formatter};
 use std::ffi::{CStr, CString};
 use std::path::Path;
 
-use super::data;
+use super::{Matrix4f, Vector2f};
 use resources::{self, ResourceLoader};
 
 ///Error related to shaders.
@@ -59,11 +59,20 @@ impl Program {
     }
 
     ///Attempts to set uniform mat4. Returns success value.
-    pub fn set_mat4(&mut self, name: &str, mat4: &data::Matrix4f) -> bool {
+    pub fn set_mat4(&mut self, name: &str, mat4: &Matrix4f) -> bool {
         let loc = self.get_uniform_location(name);
         if loc == -1 { return false }
 
         unsafe { gl::UniformMatrix4fv(loc, 1, gl::FALSE, mat4.as_ptr()); }
+
+        true
+    }
+
+    pub fn set_vec2(&mut self, name: &str, vec2: Vector2f) -> bool {
+        let loc = self.get_uniform_location(name);
+        if loc == -1 { return false }
+
+        unsafe { gl::Uniform2fv(loc, 1, vec2.as_ptr()); }
 
         true
     }

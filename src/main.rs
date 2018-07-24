@@ -26,27 +26,22 @@ fn main() {
     //Initialize ResourceLoader
     let resource_loader = match resources::ResourceLoader::new() {
         Ok(resource_loader) => resource_loader,
-        Err(error) => {
-            panic!("ERROR: Could not initialize ResourceLoader, exiting.\n{}", error);
-        },
+        Err(error) => panic!("ERROR: Could not initialize ResourceLoader, exiting.\n{}", error),
     };
 
     //Load Configuration from file
     let conf = match config::Config::from_file(&resource_loader, Path::new("config.ron")) {
         Ok(conf) => conf,
-        Err(error) => {
-            panic!("ERROR: Could not load config file, exiting.\n{}", error);
-        },
+        Err(error) => panic!("ERROR: Could not load config file, exiting.\n{}", error),
     };
 
     //Initialize SDL
     let sdl = sdl2::init().unwrap();
 
     //Initialize graphics
-    let mut graphics_manager = GraphicsManager::new(&conf, &sdl);
-
-    if let Err(error) = graphics_manager.init(&resource_loader) {
-        panic!("ERROR: Graphics initialization failed, exiting.\n{}", error);
+    let mut graphics_manager = match GraphicsManager::new(&resource_loader, &conf, &sdl) {
+        Ok(graphics_manager) => graphics_manager,
+        Err(error) => panic!("ERROR: Could not initialize graphics, exiting.\n{}", error),
     };
 
     //Initialize events
@@ -55,12 +50,10 @@ fn main() {
     //Initialize input
     let mut input_manager = input::InputManager::new();
 
-    //Load texture
-    let terrain_id = match graphics_manager.get_texture(&resource_loader, Path::new("terrain.png")) {
-        Ok(id) => id,
-        Err(error) => {
-            panic!("ERROR: Could not load texture \"terrain.png\", exiting. {}", error);
-        },
+    //Create sprite
+    let sprite = match graphics_manager.new_sprite(Path::new("terrain.png")) {
+        Ok(sprite) => sprite,
+        Err(error) => panic!("ERROR: Could not load sprite, exiting.\n{}", error),
     };
 
     //Main loop
@@ -88,7 +81,7 @@ fn main() {
         graphics_manager.clear();
 
         //Draw
-        if let Err(error) = graphics_manager.draw_sprite(terrain_id) {
+        if let Err(error) = graphics_manager.draw_sprite(sprite) {
             panic!("Error: Could not draw sprite, exiting. {}", error)
         };
 
