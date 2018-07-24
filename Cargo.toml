@@ -4,7 +4,7 @@ version = "0.1.0"
 authors = ["Alexandre Janin <alexandrejanin92@gmail.com>"]
 
 [build-dependencies]
-walkdir = "*"
+fs_extra = "*"
 
 [dependencies]
 gl = "*"

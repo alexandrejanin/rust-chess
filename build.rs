@@ -1,9 +1,7 @@
-extern crate walkdir;
+extern crate fs_extra;
 
 use std::env;
-use std::fs::{self, DirBuilder};
-use std::path::{Path, PathBuf};
-use walkdir::WalkDir;
+use std::path::PathBuf;
 
 fn main() {
     let manifest_dir = PathBuf::from(env::var("CARGO_MANIFEST_DIR").unwrap());
@@ -13,21 +11,39 @@ fn main() {
         .join("target")
         .join(env::var("PROFILE").unwrap());
 
-    //Copy res files
-    copy(
+    //Set copy options for directories
+    let dir_options = fs_extra::dir::CopyOptions {
+        overwrite: true,
+        skip_exist: false,
+        buffer_size: 64_000,
+        copy_inside: false,
+        depth: 0
+    };
+
+    //Set copy options for files
+    let file_options = fs_extra::file::CopyOptions {
+        overwrite: true,
+        skip_exist: false,
+        buffer_size: 64_000,
+    };
+
+    //Copy res directory
+    fs_extra::dir::copy(
         &manifest_dir.join("res"),
         &executable_path.join("res"),
+        &dir_options,
     );
 
     //Copy DLL
-    copy(
+    fs_extra::file::copy(
         &manifest_dir.join("bin/SDL2.dll"),
         &executable_path.join("SDL2.dll"),
+        &file_options,
     );
 }
 
-///Copies file or folder from one place to another.
-fn copy(from: &Path, to: &Path) {
+//Copies file or folder from one place to another.
+/*fn copy(from: &Path, to: &Path) {
     let from_path: PathBuf = from.into();
     let to_path: PathBuf = to.into();
 
@@ -46,4 +62,5 @@ fn copy(from: &Path, to: &Path) {
             }
         }
     }
-}
+}*/
+
