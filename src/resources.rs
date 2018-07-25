@@ -1,5 +1,4 @@
 use image;
-
 use std;
 use std::ffi;
 use std::fmt::{self, Display, Formatter};
@@ -75,10 +74,11 @@ impl ResourceLoader {
     ///Load image from PNG file.
     pub fn load_png(&self, path: &Path) -> Result<image::RgbaImage, ResourceError> {
         let path = self.get_path(path);
-        match image::open(path) {
-            Ok(img) => Ok(img.to_rgba()),
-            Err(error) => Err(ResourceError::Image(error)),
-        }
+        let img = image::open(path)?.to_rgba();
+
+        //image::imageops::flip_vertical(&img);
+
+        Ok(img)
     }
 
     ///Load String from file.

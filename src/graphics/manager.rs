@@ -1,17 +1,17 @@
-use gl;
 use cgmath::One;
+use config;
+use gl;
+use resources::{self, ResourceLoader};
 use sdl2;
 use std;
+use std::collections::HashMap;
 use std::fmt::{self, Display, Formatter};
 use std::path::{Path, PathBuf};
-use std::collections::HashMap;
-
-use config;
-use resources::{self, ResourceLoader};
 use super::{
-    TextureID, Matrix4f, Vector2f, Vector3f,
-    mesh::{Mesh, MeshBuilder, Vertex},
-    shaders::{self, Program},
+    Matrix4f, mesh::{Mesh, MeshBuilder, Vertex}, shaders::{self, Program}, sprites::Sprite, Texture,
+    Vector2f,
+    Vector2u,
+    Vector3f,
 };
 
 ///Error related to OpenGL drawing.
@@ -25,7 +25,6 @@ pub enum DrawingError {
     MeshVAONotInitialized,
 }
 
-//TODO: impl From<> for other errors
 impl From<resources::ResourceError> for DrawingError {
     fn from(error: resources::ResourceError) -> Self {
         DrawingError::ResourceError(error)
@@ -51,18 +50,6 @@ impl Display for DrawingError {
 }
 
 
-///Represents part of a 2d texture used as a sprite.
-#[derive(Copy, Clone)]
-pub struct Sprite {
-    ///ID of the texture to get sprite from.
-    pub texture_id: TextureID,
-    ///Upper left corner of sprite on texture (values in the range [0, 1]).
-    pub src_position: Vector2f,
-    ///Size of the sprite on texture (values in the range [0, 1]).
-    pub src_size: Vector2f,
-}
-
-
 ///Manages everything related to graphics and rendering.
 pub struct GraphicsManager<'a> {
     resource_loader: &'a ResourceLoader,
@@ -73,7 +60,7 @@ pub struct GraphicsManager<'a> {
     gl_context: sdl2::video::GLContext,
     program: Program,
     quad: Mesh,
-    textures: HashMap<PathBuf, TextureID>,
+    textures: HashMap<PathBuf, Texture>,
 }
 
 
@@ -111,7 +98,7 @@ impl<'a> GraphicsManager<'a> {
         //Enable depth testing, set clear color
         unsafe {
             gl::Enable(gl::DEPTH_TEST);
-            gl::DepthFunc(gl::LESS);
+            gl::DepthFunc(gl::LEQUAL);
             gl::ClearColor(0.3, 0.3, 0.5, 1.0);
         }
 
@@ -149,22 +136,11 @@ impl<'a> GraphicsManager<'a> {
         })
     }
 
-    pub fn new_sprite(&mut self, texture_path: &Path) -> Result<Sprite, DrawingError> {
-        let texture_id = self.get_texture(texture_path)?;
-
-        Ok(Sprite {
-            texture_id,
-            //TODO add those variables as parameters
-            src_position: Vector2f::new(3. / 16., 1.0),
-            src_size: Vector2f::new(1. / 16., 1. / 16.),
-        })
-    }
-
-    ///Gets texture id for given path, loading if it wasn't loaded yet.
-    fn get_texture(&mut self, path: &Path) -> Result<TextureID, DrawingError> {
+    ///Gets texture for given image, loading if it wasn't loaded yet.
+    pub fn get_texture(&mut self, path: &Path) -> Result<Texture, DrawingError> {
         //Return texture id if it's loaded already
-        if let Some(texture_id) = self.textures.get(path) {
-            return Ok(*texture_id)
+        if let Some(texture) = self.textures.get(path) {
+            return Ok(*texture)
         };
 
         //Texture wasn't found, load it
@@ -174,7 +150,7 @@ impl<'a> GraphicsManager<'a> {
         let (width, height) = image.dimensions();
 
         //Allocate texture
-        let mut texture_id: TextureID = 0;
+        let mut texture_id = 0;
 
         unsafe {
             //Create texture
@@ -211,10 +187,12 @@ impl<'a> GraphicsManager<'a> {
             gl::BindTexture(gl::TEXTURE_2D, 0);
         }
 
-        //Save texture so we don't have to load it again
-        self.textures.insert(path.into(), texture_id);
+        let texture = Texture { id: texture_id, size: Vector2u::new(width, height) };
 
-        Ok(texture_id)
+        //Save texture so we don't have to load it again
+        self.textures.insert(path.into(), texture);
+
+        Ok(texture)
     }
 
 
@@ -267,12 +245,12 @@ impl<'a> GraphicsManager<'a> {
         self.program.set_mat4("transform", &transform);
 
         //Set sprite coordinates
-        self.program.set_vec2("SourcePosition", sprite.src_position);
-        self.program.set_vec2("SourceSize", sprite.src_size);
+        self.program.set_vec2("SourcePosition", sprite.gl_position());
+        self.program.set_vec2("SourceSize", sprite.gl_size());
 
         unsafe {
             //Bind texture
-            gl::BindTexture(gl::TEXTURE_2D, sprite.texture_id);
+            gl::BindTexture(gl::TEXTURE_2D, sprite.texture_id());
 
             //Bind mesh
             gl::BindVertexArray(mesh.vao());

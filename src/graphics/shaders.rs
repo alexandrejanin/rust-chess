@@ -1,13 +1,12 @@
-use gl;
 use cgmath::{Array, Matrix};
+use gl;
+use resources::{self, ResourceLoader};
 use std;
 use std::collections::HashMap;
-use std::fmt::{self, Display, Formatter};
 use std::ffi::{CStr, CString};
+use std::fmt::{self, Display, Formatter};
 use std::path::Path;
-
 use super::{Matrix4f, Vector2f};
-use resources::{self, ResourceLoader};
 
 ///Error related to shaders.
 pub enum ShaderError {
@@ -17,6 +16,12 @@ pub enum ShaderError {
     ShaderCompilationFailed(String),
     ///OpenGL Program could not link. Contains OpenGL Error log.
     ProgramLinkingFailed(String),
+}
+
+impl From<resources::ResourceError> for ShaderError {
+    fn from(error: resources::ResourceError) -> Self {
+        ShaderError::ResourceError(error)
+    }
 }
 
 impl Display for ShaderError {
@@ -181,10 +186,7 @@ impl Shader {
     ///Creates shader from source file.
     ///shader_type: usually gl::VERTEX_SHADER or gl::FRAGMENT_SHADER
     pub fn from_file(resource_loader: &ResourceLoader, shader_type: gl::types::GLuint, path: &Path) -> Result<Shader, ShaderError> {
-        let text = match resource_loader.load_cstring(path) {
-            Ok(text) => text,
-            Err(error) => return Err(ShaderError::ResourceError(error)),
-        };
+        let text = resource_loader.load_cstring(path)?;
 
         Shader::from_source(shader_type, &text)
     }
