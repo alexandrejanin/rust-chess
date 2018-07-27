@@ -1,17 +1,15 @@
 use image;
 use std;
-use std::ffi;
 use std::fmt::{self, Display, Formatter};
 use std::fs::{self, File};
 use std::io::{self, Read};
 use std::path::{Path, PathBuf};
 
-#[derive(Debug)]
 ///Errors related to resource loading.
+#[derive(Debug)]
 pub enum ResourceError {
     ///The ResourceLoader could not find the path to the current executable.
     ExecutablePathNotFound,
-    FileContainsNullByte(PathBuf),
     Io(io::Error),
     Image(image::ImageError),
 }
@@ -32,12 +30,12 @@ impl Display for ResourceError {
     fn fmt(&self, f: &mut Formatter) -> fmt::Result {
         match self {
             ResourceError::ExecutablePathNotFound => write!(f, "Error: Could not locate executable path."),
-            ResourceError::FileContainsNullByte(path) => write!(f, "Error: File \"{:?}\" contains a null byte.", path),
             ResourceError::Io(error) => write!(f, "{}", error),
             ResourceError::Image(error) => write!(f, "{}", error),
         }
     }
 }
+
 
 ///Loads and manages Resource files.
 pub struct ResourceLoader {
@@ -74,11 +72,8 @@ impl ResourceLoader {
     ///Load image from PNG file.
     pub fn load_png(&self, path: &Path) -> Result<image::RgbaImage, ResourceError> {
         let path = self.get_path(path);
-        let img = image::open(path)?.to_rgba();
 
-        //image::imageops::flip_vertical(&img);
-
-        Ok(img)
+        Ok(image::open(path)?.to_rgba())
     }
 
     ///Load String from file.
@@ -93,27 +88,5 @@ impl ResourceLoader {
         file.read_to_string(&mut string)?;
 
         Ok(string)
-    }
-
-    ///Load CString from file, making sure that it doesn't contain a null byte.
-    pub fn load_cstring(&self, path: &Path) -> Result<ffi::CString, ResourceError> {
-        //Open file
-        let mut file = self.get_file(path)?;
-
-        //Allocate buffer for contents
-        let mut buffer: Vec<u8> = Vec::with_capacity(
-            file.metadata()?.len() as usize + 1
-        );
-
-        //Read file into buffer
-        file.read_to_end(&mut buffer)?;
-
-        //If buffer contains null byte, return error
-        if buffer.iter().find(|i| **i == 0).is_some() {
-            return Err(ResourceError::FileContainsNullByte(path.into()));
-        }
-
-        //Otherwise, return CString from buffer
-        Ok(unsafe { ffi::CString::from_vec_unchecked(buffer) })
     }
 }

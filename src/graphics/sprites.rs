@@ -48,8 +48,7 @@ impl SpriteSheet {
 #[derive(Copy, Clone, Debug)]
 pub struct Sprite {
     sheet: SpriteSheet,
-    sheet_position: Vector2u,
-    gl_position: Vector2f,
+    pub position: Vector2u,
 }
 
 impl Sprite {
@@ -57,21 +56,13 @@ impl Sprite {
     pub fn new(sheet: SpriteSheet, position: Vector2u) -> Sprite {
         Sprite {
             sheet,
-            sheet_position: position,
-            gl_position: sheet.gl_position(position),
+            position,
         }
     }
 
     pub fn texture_id(&self) -> TextureID { self.sheet.texture_id() }
 
-    pub fn gl_position(&self) -> Vector2f { self.gl_position }
+    pub fn gl_position(&self) -> Vector2f { self.sheet.gl_position(self.position) }
 
     pub fn gl_size(&self) -> Vector2f { self.sheet.gl_size() }
-
-    //pub fn pixel_position(&self) -> Vector2u { self.pixel_position }
-
-    pub fn set_position(&mut self, position: Vector2u) {
-        self.sheet_position = position;
-        self.gl_position = self.sheet.gl_position(position);
-    }
 }

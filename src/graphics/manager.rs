@@ -15,6 +15,7 @@ use super::{
 };
 
 ///Error related to OpenGL drawing.
+#[derive(Debug)]
 pub enum DrawingError {
     ResourceError(resources::ResourceError),
     ///Error related to OpenGL shaders.
@@ -95,10 +96,16 @@ impl<'a> GraphicsManager<'a> {
             false => sdl2::video::SwapInterval::Immediate,
         });
 
-        //Enable depth testing, set clear color
         unsafe {
+            //Depth testing
             gl::Enable(gl::DEPTH_TEST);
             gl::DepthFunc(gl::LEQUAL);
+
+            //Blending
+            gl::Enable(gl::BLEND);
+            gl::BlendFunc(gl::SRC_ALPHA, gl::ONE_MINUS_SRC_ALPHA);
+
+            //Clear color
             gl::ClearColor(0.3, 0.3, 0.5, 1.0);
         }
 
@@ -108,10 +115,10 @@ impl<'a> GraphicsManager<'a> {
         //Build quad mesh
         let mesh_builder = MeshBuilder {
             vertices: vec![
-                Vertex { position: Vector3f::new(0.5, 0.5, 0.0), uv: Vector2f::new(1.0, 1.0) },  //Top right,
-                Vertex { position: Vector3f::new(0.5, -0.5, 0.0), uv: Vector2f::new(1.0, 0.0) },  //Bottom right
-                Vertex { position: Vector3f::new(-0.5, -0.5, 0.0), uv: Vector2f::new(0.0, 0.0) },  //Bottom left
-                Vertex { position: Vector3f::new(-0.5, 0.5, 0.0), uv: Vector2f::new(0.0, 1.0) },  //Top left,
+                Vertex { position: Vector3f::new(0.5, 0.5, 0.0), uv: Vector2f::new(1.0, 0.0) },  //Top right,
+                Vertex { position: Vector3f::new(0.5, -0.5, 0.0), uv: Vector2f::new(1.0, 1.0) },  //Bottom right
+                Vertex { position: Vector3f::new(-0.5, -0.5, 0.0), uv: Vector2f::new(0.0, 1.0) },  //Bottom left
+                Vertex { position: Vector3f::new(-0.5, 0.5, 0.0), uv: Vector2f::new(0.0, 0.0) },  //Top left,
             ],
 
             indices: vec![
@@ -187,7 +194,10 @@ impl<'a> GraphicsManager<'a> {
             gl::BindTexture(gl::TEXTURE_2D, 0);
         }
 
-        let texture = Texture { id: texture_id, size: Vector2u::new(width, height) };
+        let texture = Texture {
+            id: texture_id,
+            size: Vector2u::new(width, height)
+        };
 
         //Save texture so we don't have to load it again
         self.textures.insert(path.into(), texture);

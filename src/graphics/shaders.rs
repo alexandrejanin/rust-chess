@@ -3,13 +3,15 @@ use gl;
 use resources::{self, ResourceLoader};
 use std;
 use std::collections::HashMap;
-use std::ffi::{CStr, CString};
+use std::ffi::{self, CStr, CString};
 use std::fmt::{self, Display, Formatter};
 use std::path::Path;
 use super::{Matrix4f, Vector2f};
 
 ///Error related to shaders.
+#[derive(Debug)]
 pub enum ShaderError {
+    NulError(ffi::NulError),
     ///An error related to resources handling.
     ResourceError(resources::ResourceError),
     ///OpenGL Shader could not compile. Contains OpenGL Error log.
@@ -19,15 +21,18 @@ pub enum ShaderError {
 }
 
 impl From<resources::ResourceError> for ShaderError {
-    fn from(error: resources::ResourceError) -> Self {
-        ShaderError::ResourceError(error)
-    }
+    fn from(error: resources::ResourceError) -> Self { ShaderError::ResourceError(error) }
+}
+
+impl From<ffi::NulError> for ShaderError {
+    fn from(error: ffi::NulError) -> Self { ShaderError::NulError(error) }
 }
 
 impl Display for ShaderError {
     fn fmt(&self, f: &mut Formatter) -> fmt::Result {
         write!(f, "Shader error: ")?;
         match self {
+            ShaderError::NulError(error) => write!(f, "{}", error),
             ShaderError::ResourceError(error) => write!(f, "{}", error),
             ShaderError::ShaderCompilationFailed(message) => write!(f, "Shader could not compile: {}", message),
             ShaderError::ProgramLinkingFailed(message) => write!(f, "Program could not link: {}", message),
@@ -186,7 +191,7 @@ impl Shader {
     ///Creates shader from source file.
     ///shader_type: usually gl::VERTEX_SHADER or gl::FRAGMENT_SHADER
     pub fn from_file(resource_loader: &ResourceLoader, shader_type: gl::types::GLuint, path: &Path) -> Result<Shader, ShaderError> {
-        let text = resource_loader.load_cstring(path)?;
+        let text = CString::new(resource_loader.load_string(path)?)?;
 
         Shader::from_source(shader_type, &text)
     }
