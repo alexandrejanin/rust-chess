@@ -1,17 +1,17 @@
-use cgmath::One;
 use config;
 use gl;
+use maths::{Vector2f, Vector2u, Vector3f};
+use maths::transform::Transform;
 use resources::{self, ResourceLoader};
 use sdl2;
-use std;
-use std::collections::HashMap;
-use std::fmt::{self, Display, Formatter};
-use std::path::{Path, PathBuf};
+use std::{
+    self,
+    collections::HashMap,
+    fmt::{self, Display, Formatter},
+    path::{Path, PathBuf},
+};
 use super::{
-    Matrix4f, mesh::{Mesh, MeshBuilder, Vertex}, shaders::{self, Program}, sprites::Sprite, Texture,
-    Vector2f,
-    Vector2u,
-    Vector3f,
+    mesh::{Mesh, MeshBuilder, Vertex}, shaders::{self, Program}, sprites::Sprite, Texture,
 };
 
 ///Error related to OpenGL drawing.
@@ -236,27 +236,26 @@ impl<'a> GraphicsManager<'a> {
 
 
     ///Draw textured quad
-    pub fn draw_sprite(&mut self, sprite: Sprite) -> Result<(), DrawingError> {
-        let quad = self.quad;
-        self.draw_mesh(quad, sprite)
+    pub fn draw_sprite(&mut self, sprite: Sprite, transform: Transform) -> Result<(), DrawingError> {
+        let mesh = self.quad;
+        self.draw_mesh(mesh, sprite, transform)
     }
 
 
     ///Draw textured mesh
-    pub fn draw_mesh(&mut self, mesh: Mesh, sprite: Sprite) -> Result<(), DrawingError> {
+    pub fn draw_mesh(&mut self, mesh: Mesh, sprite: Sprite, transform: Transform) -> Result<(), DrawingError> {
         //Check that mesh is valid
         mesh.check()?;
 
         //Use program
         self.program.set_used();
 
-        //Set transform matrix
-        let transform = Matrix4f::one();
-        self.program.set_mat4("transform", &transform);
-
         //Set sprite coordinates
         self.program.set_vec2("SourcePosition", sprite.gl_position());
         self.program.set_vec2("SourceSize", sprite.gl_size());
+
+        //Set transform
+        self.program.set_mat4("transform", &transform.matrix());
 
         unsafe {
             //Bind texture

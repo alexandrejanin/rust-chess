@@ -1,9 +1,5 @@
-use super::{
-    Texture,
-    TextureID,
-    Vector2f,
-    Vector2u
-};
+use maths::{Vector2f, Vector2i, Vector2u};
+use super::{Texture, TextureID};
 
 ///Represents an OpenGL texture sliced into sprites.
 #[derive(Copy, Clone, Debug)]
@@ -36,10 +32,10 @@ impl SpriteSheet {
 
     pub fn gl_size(&self) -> Vector2f { self.gl_size }
 
-    pub fn gl_position(&self, position: Vector2u) -> Vector2f {
+    pub fn gl_position(&self, position: Vector2i) -> Vector2f {
         Vector2f::new(
-            (self.sprite_width() * position.x) as f32 / self.texture.width() as f32,
-            (self.sprite_height() * position.y) as f32 / self.texture.height() as f32,
+            (self.sprite_width() as i32 * position.x) as f32 / self.texture.width() as f32,
+            (self.sprite_height() as i32 * position.y) as f32 / self.texture.height() as f32,
         )
     }
 }
@@ -48,12 +44,12 @@ impl SpriteSheet {
 #[derive(Copy, Clone, Debug)]
 pub struct Sprite {
     sheet: SpriteSheet,
-    pub position: Vector2u,
+    pub position: Vector2i,
 }
 
 impl Sprite {
     ///Create a new sprite from a sprite sheet and a position
-    pub fn new(sheet: SpriteSheet, position: Vector2u) -> Sprite {
+    pub fn new(sheet: SpriteSheet, position: Vector2i) -> Sprite {
         Sprite {
             sheet,
             position,

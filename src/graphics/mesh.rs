@@ -1,13 +1,10 @@
 use gl;
+use maths::{Vector2f, Vector3f};
 use std;
+use super::manager::DrawingError;
 
-use super::{
-    Vector2f, Vector3f,
-    manager::DrawingError
-};
-
-#[derive(Clone, Copy)]
-#[repr(C, packed)]
+#[repr(C)]
+#[derive(Copy, Clone, Debug)]
 pub struct Vertex {
     pub position: Vector3f,
     pub uv: Vector2f,
@@ -51,7 +48,7 @@ impl Vertex {
 
 
 ///Represents a mesh that is loaded in OpenGL.
-#[derive(Clone, Copy)]
+#[derive(Copy, Clone, Debug)]
 pub struct Mesh {
     vao: gl::types::GLuint,
     ebo: gl::types::GLuint,
@@ -62,6 +59,7 @@ pub struct Mesh {
 impl Mesh {
     pub fn vao(&self) -> gl::types::GLuint { self.vao }
     pub fn ebo(&self) -> gl::types::GLuint { self.ebo }
+
     pub fn vertex_count(&self) -> usize { self.vertex_count }
     pub fn indices_count(&self) -> usize { self.indices_count }
 
@@ -73,6 +71,7 @@ impl Mesh {
     }
 }
 
+#[derive(Debug)]
 pub struct MeshBuilder {
     pub vertices: Vec<Vertex>,
     pub indices: Vec<gl::types::GLuint>,

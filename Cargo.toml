@@ -8,7 +8,6 @@ fs_extra = "*"
 
 [dependencies]
 gl = "*"
-cgmath = "*"
 image = "*"
 ron = "*"
 serde = "*"

@@ -1,12 +1,13 @@
-use cgmath::{Array, Matrix};
 use gl;
+use maths::{Matrix4f, Vector2f};
 use resources::{self, ResourceLoader};
-use std;
-use std::collections::HashMap;
-use std::ffi::{self, CStr, CString};
-use std::fmt::{self, Display, Formatter};
-use std::path::Path;
-use super::{Matrix4f, Vector2f};
+use std::{
+    self,
+    collections::HashMap,
+    ffi::{self, CStr, CString},
+    fmt::{self, Display, Formatter},
+    path::Path,
+};
 
 ///Error related to shaders.
 #[derive(Debug)]

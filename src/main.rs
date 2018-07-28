@@ -1,4 +1,3 @@
-extern crate cgmath;
 // Load extern crates
 extern crate gl;
 extern crate image;
@@ -9,14 +8,20 @@ extern crate serde;
 
 use graphics::manager::GraphicsManager;
 use graphics::sprites;
+use maths::{
+    transform::Transform, Vector2i,
+    Vector2u,
+};
 use std::path::Path;
 use std::time::{Duration, SystemTime};
 
 // Load local modules
 mod config;
-mod graphics;
 mod input;
 mod resources;
+
+mod maths;
+mod graphics;
 
 
 // Main
@@ -55,12 +60,13 @@ fn main() {
                                           .expect(&format!("ERROR: Could not load texture from '{:?}'", terrain_path));
 
     //Create sprite sheet
-    let terrain_sheet = sprites::SpriteSheet::new(terrain_texture, (16, 16).into());
+    let terrain_sheet = sprites::SpriteSheet::new(terrain_texture, Vector2u::new(16, 16));
 
     //Create sprites
-    let mut sprite = sprites::Sprite::new(terrain_sheet, (3, 0).into());
-    let tnt = sprites::Sprite::new(terrain_sheet, (8, 0).into());
+    let mut sprite = sprites::Sprite::new(terrain_sheet, Vector2i::new(3, 0));
 
+    //Create transform
+    let mut transform = Transform::new();
 
     println!("Startup took {} ms.", (SystemTime::now().duration_since(start_time)).unwrap().subsec_millis());
 
@@ -90,8 +96,12 @@ fn main() {
         //Clear
         graphics_manager.clear();
 
+        let time = SystemTime::now().duration_since(start_time).unwrap();
+
+        transform.position.x = (time.as_secs() as f32 + time.subsec_nanos() as f32 / 1_000_000_000 as f32).sin() / 2.0;
+
         //Draw
-        graphics_manager.draw_sprite(sprite)
+        graphics_manager.draw_sprite(sprite, transform)
                         .expect(&format!("ERROR: Could not draw sprite ({:?})", sprite));
 
         //Render
