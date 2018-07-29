@@ -9,6 +9,7 @@ extern crate serde;
 
 
 use graphics::{
+    camera::OrthographicCamera,
     manager::GraphicsManager,
     sprites
 };
@@ -16,6 +17,7 @@ use maths::{Vector2i, Vector2u};
 use std::path::Path;
 use std::time::{Duration, SystemTime};
 use transform::Transform;
+
 
 mod config;
 mod input;
@@ -69,6 +71,9 @@ fn main() {
     //Create transform
     let mut transform = Transform::new();
 
+    //Create camera
+    let mut camera = OrthographicCamera::from_width((3.0, 1.0, -10.0).into(), 10.0, 100.0, graphics_manager.window_size());
+
 
     println!("Startup took {} ms.", (SystemTime::now().duration_since(start_time)).unwrap().subsec_millis());
 
@@ -81,7 +86,10 @@ fn main() {
                 sdl2::event::Event::Quit { .. } => break 'main,
                 sdl2::event::Event::Window { win_event, .. } =>
                     match win_event {
-                        sdl2::event::WindowEvent::SizeChanged(width, height) => graphics_manager.resize(width, height),
+                        sdl2::event::WindowEvent::SizeChanged(width, height) => {
+                            graphics_manager.resize(width, height);
+                            camera.resize_keep_width((width as u32, height as u32).into())
+                        },
                         _ => {}
                     },
                 _ => {}
@@ -98,17 +106,8 @@ fn main() {
         //Clear
         graphics_manager.clear();
 
-        let time = SystemTime::now().duration_since(start_time).unwrap();
-
-        transform.position.x = (time.as_secs() as f32 + time.subsec_nanos() as f32 / 1_000_000_000f32).sin() / 2.0;
-
         //Draw
-        for _ in 0..1000 {
-            let offset = rand::random::<(f32, f32, f32)>();
-            let mut transform = transform;
-            transform.position += offset.into();
-            graphics_manager.draw_sprite(sprite, transform);
-        }
+        graphics_manager.draw_sprite(sprite, transform, Some(&camera));
 
         //Render
         graphics_manager.render().expect("ERROR: Rendering failed, exiting.");

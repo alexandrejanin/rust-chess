@@ -1,11 +1,9 @@
-use maths::Vector2f;
+use maths::{Matrix4f, Vector2f};
 use std::{
     cmp::Ordering,
     slice::Iter
 };
 use super::{mesh::Mesh, shaders::Program, Texture};
-use transform::Transform;
-
 
 ///A queued draw call to be rendered.
 #[derive(Debug)]
@@ -20,8 +18,8 @@ pub struct DrawCall {
     pub tex_position: Vector2f,
     ///Size of the texture to sample (in OpenGL coordinates)
     pub tex_size: Vector2f,
-    ///Transform to apply to the mesh.
-    pub transform: Transform,
+    ///Transform matrix to apply to the mesh.
+    pub matrix: Matrix4f,
 }
 
 impl PartialEq for DrawCall {
@@ -31,7 +29,7 @@ impl PartialEq for DrawCall {
             self.mesh == other.mesh &&
             self.tex_position == other.tex_position &&
             self.tex_size == other.tex_size &&
-            self.transform == other.transform
+            self.matrix == other.matrix
     }
 }
 
@@ -70,7 +68,13 @@ impl DrawCallQueue {
         }
     }
 
-    pub fn add(&mut self, drawcall: DrawCall) {
+    pub fn with_capacity(capacity: usize) -> Self {
+        Self {
+            drawcalls: Vec::with_capacity(capacity)
+        }
+    }
+
+    pub fn insert(&mut self, drawcall: DrawCall) {
         let index = match self.drawcalls.binary_search(&drawcall) {
             Ok(found_index) => found_index,
             Err(new_index) => new_index,
@@ -81,6 +85,10 @@ impl DrawCallQueue {
 
     pub fn clear(&mut self) {
         self.drawcalls.clear()
+    }
+
+    pub fn len(&self) -> usize {
+        self.drawcalls.len()
     }
 
     pub fn iter(&self) -> Iter<DrawCall> {

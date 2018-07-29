@@ -10,13 +10,14 @@ use std::{
     path::{Path, PathBuf},
 };
 use super::{
+    camera::Camera,
     drawcall::{DrawCall, DrawCallQueue}, mesh::{Mesh, MeshBuilder, Vertex},
-    ProgramID,
     shaders::{self, Program},
     sprites::Sprite,
-    Texture, TextureID,
+    Texture,
 };
 use transform::Transform;
+
 
 ///Error related to OpenGL drawing.
 #[derive(Debug)]
@@ -79,7 +80,7 @@ pub struct GraphicsManager<'a> {
 
 impl<'a> GraphicsManager<'a> {
     ///Initializes graphics from SDL and Config object
-    pub fn new(resource_loader: &'a ResourceLoader, conf: &'a config::Config, sdl: &'a sdl2::Sdl) -> Result<GraphicsManager<'a>, DrawingError> {
+    pub fn new(resource_loader: &'a ResourceLoader, conf: &'a config::Config, sdl: &'a sdl2::Sdl) -> Result<Self, DrawingError> {
         //Initialize VideoSubsystem
         let video = sdl.video().unwrap();
 
@@ -141,8 +142,19 @@ impl<'a> GraphicsManager<'a> {
 
         let quad = mesh_builder.build();
 
+
+        unsafe {
+            let mut vert = 0;
+            let mut frag = 0;
+            gl::GetIntegerv(gl::MAX_VERTEX_UNIFORM_COMPONENTS, &mut vert);
+            gl::GetIntegerv(gl::MAX_FRAGMENT_UNIFORM_COMPONENTS, &mut frag);
+            println!("vert: {}", vert);
+            println!("frag: {}", frag);
+        }
+
+
         //Build and return graphics manager
-        Ok(GraphicsManager {
+        Ok(Self {
             resource_loader,
             conf,
             sdl,
@@ -218,6 +230,10 @@ impl<'a> GraphicsManager<'a> {
         Ok(texture)
     }
 
+    ///Get the current window's size.
+    pub fn window_size(&self) -> Vector2u {
+        self.window.size().into()
+    }
 
     ///Call when the window is resized
     pub fn resize(&mut self, width: i32, height: i32) {
@@ -240,12 +256,12 @@ impl<'a> GraphicsManager<'a> {
         }
     }
 
-
     ///Renders the current frame
     pub fn render(&mut self) -> Result<(), DrawingError> {
         let mut last_program = None;
         let mut last_mesh = None;
         let mut last_texture = None;
+
 
         //Render draw queue
         for drawcall in self.drawcalls.iter() {
@@ -261,21 +277,25 @@ impl<'a> GraphicsManager<'a> {
         Ok(())
     }
 
-
     ///Add sprite to render queue.
-    pub fn draw_sprite(&mut self, sprite: Sprite, transform: Transform) {
-        let drawcall = DrawCall {
+    pub fn draw_sprite(&mut self, sprite: Sprite, transform: Transform, camera: Option<&Camera>) {
+        let matrix = match camera {
+            None => transform.matrix(),
+            Some(camera) => camera.matrix() * transform.matrix(),
+        };
+
+        self.drawcalls.insert(DrawCall {
             mesh: self.quad,
             texture: sprite.texture(),
             program: self.program,
             tex_position: sprite.gl_position(),
             tex_size: sprite.gl_size(),
-            transform,
-        };
-
-        self.drawcalls.add(drawcall)
+            matrix,
+        })
     }
 
+    //TODO: Instantiation?
+    ///Draw a specific drawcall from the queue.
     fn draw(drawcall: &DrawCall, last_program: &mut Option<Program>, last_mesh: &mut Option<Mesh>, last_texture: &mut Option<Texture>)
         -> Result<(), DrawingError> {
         //Check that mesh is valid
@@ -288,7 +308,7 @@ impl<'a> GraphicsManager<'a> {
         }
 
         //Set transform matrix
-        drawcall.program.set_mat4("transform", &drawcall.transform.matrix());
+        drawcall.program.set_mat4("transform", &drawcall.matrix);
 
         //Set texture coordinates
         drawcall.program.set_vec2("SourcePosition", &drawcall.tex_position);
