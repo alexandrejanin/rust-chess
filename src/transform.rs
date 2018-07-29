@@ -1,6 +1,6 @@
-use super::{Matrix4f, Vector3f};
+use maths::{Matrix4f, Vector3f};
 
-#[derive(Copy, Clone, Debug)]
+#[derive(Copy, Clone, Debug, PartialEq)]
 pub struct Transform {
     pub position: Vector3f,
     pub scale: Vector3f,

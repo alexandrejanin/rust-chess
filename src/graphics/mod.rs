@@ -1,19 +1,37 @@
 use gl;
 use maths::Vector2u;
+use std::cmp::Ordering;
 
+pub mod camera;
 pub mod manager;
 pub mod sprites;
+mod drawcall;
 mod mesh;
 mod shaders;
 
 ///ID of loaded OpenGL Texture
 pub type TextureID = gl::types::GLuint;
 
+///ID of loaded OpenGL Program
+pub type ProgramID = gl::types::GLuint;
+
 ///Represents a texture loaded in OpenGL.
-#[derive(Copy, Clone, Debug)]
+#[derive(Copy, Clone, Debug, PartialEq, Eq)]
 pub struct Texture {
     id: TextureID,
     size: Vector2u,
+}
+
+impl PartialOrd for Texture {
+    fn partial_cmp(&self, other: &Self) -> Option<Ordering> {
+        Some(self.cmp(other))
+    }
+}
+
+impl Ord for Texture {
+    fn cmp(&self, other: &Self) -> Ordering {
+        self.id.cmp(&other.id)
+    }
 }
 
 impl Texture {

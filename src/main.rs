@@ -1,28 +1,29 @@
 // Load extern crates
 extern crate gl;
 extern crate image;
+extern crate rand;
 extern crate ron;
 extern crate sdl2;
 #[macro_use]
 extern crate serde;
 
-use graphics::manager::GraphicsManager;
-use graphics::sprites;
-use maths::{
-    transform::Transform, Vector2i,
-    Vector2u,
+
+use graphics::{
+    manager::GraphicsManager,
+    sprites
 };
+use maths::{Vector2i, Vector2u};
 use std::path::Path;
 use std::time::{Duration, SystemTime};
+use transform::Transform;
 
-// Load local modules
 mod config;
 mod input;
 mod resources;
 
 mod maths;
 mod graphics;
-
+mod transform;
 
 // Main
 fn main() {
@@ -68,6 +69,7 @@ fn main() {
     //Create transform
     let mut transform = Transform::new();
 
+
     println!("Startup took {} ms.", (SystemTime::now().duration_since(start_time)).unwrap().subsec_millis());
 
 
@@ -98,14 +100,18 @@ fn main() {
 
         let time = SystemTime::now().duration_since(start_time).unwrap();
 
-        transform.position.x = (time.as_secs() as f32 + time.subsec_nanos() as f32 / 1_000_000_000 as f32).sin() / 2.0;
+        transform.position.x = (time.as_secs() as f32 + time.subsec_nanos() as f32 / 1_000_000_000f32).sin() / 2.0;
 
         //Draw
-        graphics_manager.draw_sprite(sprite, transform)
-                        .expect(&format!("ERROR: Could not draw sprite ({:?})", sprite));
+        for _ in 0..1000 {
+            let offset = rand::random::<(f32, f32, f32)>();
+            let mut transform = transform;
+            transform.position += offset.into();
+            graphics_manager.draw_sprite(sprite, transform);
+        }
 
         //Render
-        graphics_manager.render();
+        graphics_manager.render().expect("ERROR: Rendering failed, exiting.");
 
         //Limit fps
         std::thread::sleep(Duration::from_millis(1));

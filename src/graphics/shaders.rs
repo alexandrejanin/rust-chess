@@ -3,11 +3,11 @@ use maths::{Matrix4f, Vector2f};
 use resources::{self, ResourceLoader};
 use std::{
     self,
-    collections::HashMap,
     ffi::{self, CStr, CString},
     fmt::{self, Display, Formatter},
     path::Path,
 };
+use super::ProgramID;
 
 ///Error related to shaders.
 #[derive(Debug)]
@@ -43,24 +43,14 @@ impl Display for ShaderError {
 
 
 ///Represents an OpenGL Shader Program.
+#[derive(Copy, Clone, Debug, PartialEq, Eq, PartialOrd, Ord)]
 pub struct Program {
-    program_id: gl::types::GLuint,
-    uniform_locs: HashMap<String, gl::types::GLint>,
+    id: ProgramID,
 }
-
-
-impl Drop for Program {
-    fn drop(&mut self) {
-        unsafe {
-            gl::DeleteProgram(self.id());
-        }
-    }
-}
-
 
 impl Program {
-    pub fn id(&self) -> gl::types::GLuint {
-        self.program_id
+    pub fn id(&self) -> ProgramID {
+        self.id
     }
 
     pub fn set_used(&self) {
@@ -69,8 +59,9 @@ impl Program {
         }
     }
 
+
     ///Attempts to set uniform mat4. Returns success value.
-    pub fn set_mat4(&mut self, name: &str, mat4: &Matrix4f) -> bool {
+    pub fn set_mat4(&self, name: &str, mat4: &Matrix4f) -> bool {
         let loc = self.get_uniform_location(name);
         if loc == -1 { return false }
 
@@ -79,7 +70,7 @@ impl Program {
         true
     }
 
-    pub fn set_vec2(&mut self, name: &str, vec2: Vector2f) -> bool {
+    pub fn set_vec2(&self, name: &str, vec2: &Vector2f) -> bool {
         let loc = self.get_uniform_location(name);
         if loc == -1 { return false }
 
@@ -89,21 +80,28 @@ impl Program {
     }
 
     ///Returns uniform location in program from uniform name.
-    fn get_uniform_location(&mut self, name: &str) -> gl::types::GLint {
-        let loc = match self.uniform_locs.get(name) {
+    fn get_uniform_location(&self, name: &str) -> gl::types::GLint {
+        let uniform_name = CString::new(name).unwrap();
+        unsafe {
+            return gl::GetUniformLocation(self.id, uniform_name.as_ptr())
+        }
+        /*
+        let loc = match self.uniform_locs.get(&(id, name.to_string())) {
             Some(loc) => return *loc,
             None => {
                 let uniform_name = CString::new(name).unwrap();
                 unsafe {
-                    gl::GetUniformLocation(self.id(), uniform_name.as_ptr())
+                    gl::GetUniformLocation(id, uniform_name.as_ptr())
                 }
             },
         };
 
-        self.uniform_locs.insert(name.into(), loc);
+        self.uniform_locs.insert((id, name.to_string()), loc);
 
         loc
+        */
     }
+
 
     ///Create Program from vertex and fragment shader paths.
     pub fn load_shaders(resource_loader: &ResourceLoader, v_path: &Path, f_path: &Path) -> Result<Program, ShaderError> {
@@ -165,12 +163,13 @@ impl Program {
             }
         }
 
-        Ok(Program { program_id, uniform_locs: HashMap::new() })
+        Ok(Program { id: program_id })
     }
 }
 
 
 ///Represents an OpenGL Shader
+#[derive(Debug, PartialEq, Eq, PartialOrd, Ord, Hash)]
 pub struct Shader {
     id: gl::types::GLuint,
 }

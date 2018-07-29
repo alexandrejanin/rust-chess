@@ -5,7 +5,7 @@ use super::Num;
 // Vector2
 //=========
 #[repr(C)]
-#[derive(Copy, Clone, Eq, PartialEq, Hash, Debug)]
+#[derive(Copy, Clone, Debug, PartialEq, Eq)]
 pub struct Vector2<T: Num> {
     pub x: T,
     pub y: T,
@@ -147,7 +147,7 @@ impl<T: Num + Neg<Output=T>> Neg for Vector2<T> {
 // Vector3
 //=========
 #[repr(C)]
-#[derive(Copy, Clone, Eq, PartialEq, Hash, Debug)]
+#[derive(Copy, Clone, Debug, PartialEq, Eq)]
 pub struct Vector3<T: Num> {
     pub x: T,
     pub y: T,

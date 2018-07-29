@@ -1,7 +1,6 @@
 use config;
 use gl;
 use maths::{Vector2f, Vector2u, Vector3f};
-use maths::transform::Transform;
 use resources::{self, ResourceLoader};
 use sdl2;
 use std::{
@@ -11,8 +10,13 @@ use std::{
     path::{Path, PathBuf},
 };
 use super::{
-    mesh::{Mesh, MeshBuilder, Vertex}, shaders::{self, Program}, sprites::Sprite, Texture,
+    drawcall::{DrawCall, DrawCallQueue}, mesh::{Mesh, MeshBuilder, Vertex},
+    ProgramID,
+    shaders::{self, Program},
+    sprites::Sprite,
+    Texture, TextureID,
 };
+use transform::Transform;
 
 ///Error related to OpenGL drawing.
 #[derive(Debug)]
@@ -50,7 +54,6 @@ impl Display for DrawingError {
     }
 }
 
-
 ///Manages everything related to graphics and rendering.
 pub struct GraphicsManager<'a> {
     resource_loader: &'a ResourceLoader,
@@ -59,9 +62,18 @@ pub struct GraphicsManager<'a> {
     video: sdl2::VideoSubsystem,
     window: sdl2::video::Window,
     gl_context: sdl2::video::GLContext,
+
+    ///Basic shader program
     program: Program,
+
+    ///Basic mesh used to draw sprites.
     quad: Mesh,
+
+    ///Holds all textures that are loaded already.
     textures: HashMap<PathBuf, Texture>,
+
+    ///All draw calls to be rendered this frame.
+    drawcalls: DrawCallQueue,
 }
 
 
@@ -140,6 +152,7 @@ impl<'a> GraphicsManager<'a> {
             program,
             quad,
             textures: HashMap::new(),
+            drawcalls: DrawCallQueue::new(),
         })
     }
 
@@ -229,55 +242,82 @@ impl<'a> GraphicsManager<'a> {
 
 
     ///Renders the current frame
-    pub fn render(&self) {
+    pub fn render(&mut self) -> Result<(), DrawingError> {
+        let mut last_program = None;
+        let mut last_mesh = None;
+        let mut last_texture = None;
+
+        //Render draw queue
+        for drawcall in self.drawcalls.iter() {
+            Self::draw(drawcall, &mut last_program, &mut last_mesh, &mut last_texture)?
+        }
+
+        //Clear queue
+        self.drawcalls.clear();
+
         //Swap buffers
         self.window.gl_swap_window();
+
+        Ok(())
     }
 
 
-    ///Draw textured quad
-    pub fn draw_sprite(&mut self, sprite: Sprite, transform: Transform) -> Result<(), DrawingError> {
-        let mesh = self.quad;
-        self.draw_mesh(mesh, sprite, transform)
+    ///Add sprite to render queue.
+    pub fn draw_sprite(&mut self, sprite: Sprite, transform: Transform) {
+        let drawcall = DrawCall {
+            mesh: self.quad,
+            texture: sprite.texture(),
+            program: self.program,
+            tex_position: sprite.gl_position(),
+            tex_size: sprite.gl_size(),
+            transform,
+        };
+
+        self.drawcalls.add(drawcall)
     }
 
-
-    ///Draw textured mesh
-    pub fn draw_mesh(&mut self, mesh: Mesh, sprite: Sprite, transform: Transform) -> Result<(), DrawingError> {
+    fn draw(drawcall: &DrawCall, last_program: &mut Option<Program>, last_mesh: &mut Option<Mesh>, last_texture: &mut Option<Texture>)
+        -> Result<(), DrawingError> {
         //Check that mesh is valid
-        mesh.check()?;
+        drawcall.mesh.check()?;
 
         //Use program
-        self.program.set_used();
+        if last_program.is_none() || drawcall.program != last_program.unwrap() {
+            drawcall.program.set_used();
+            *last_program = Some(drawcall.program);
+        }
 
-        //Set sprite coordinates
-        self.program.set_vec2("SourcePosition", sprite.gl_position());
-        self.program.set_vec2("SourceSize", sprite.gl_size());
+        //Set transform matrix
+        drawcall.program.set_mat4("transform", &drawcall.transform.matrix());
 
-        //Set transform
-        self.program.set_mat4("transform", &transform.matrix());
+        //Set texture coordinates
+        drawcall.program.set_vec2("SourcePosition", &drawcall.tex_position);
+        drawcall.program.set_vec2("SourceSize", &drawcall.tex_size);
+
+        if last_texture.is_none() || drawcall.texture != last_texture.unwrap() {
+            unsafe {
+                //Bind texture
+                gl::BindTexture(gl::TEXTURE_2D, drawcall.texture.id());
+            }
+            *last_texture = Some(drawcall.texture);
+        }
+
+        if last_mesh.is_none() || drawcall.mesh != last_mesh.unwrap() {
+            unsafe {
+                //Bind mesh
+                gl::BindVertexArray(drawcall.mesh.vao());
+                gl::BindBuffer(gl::ELEMENT_ARRAY_BUFFER, drawcall.mesh.ebo());
+            }
+            *last_mesh = Some(drawcall.mesh);
+        }
 
         unsafe {
-            //Bind texture
-            gl::BindTexture(gl::TEXTURE_2D, sprite.texture_id());
-
-            //Bind mesh
-            gl::BindVertexArray(mesh.vao());
-            gl::BindBuffer(gl::ELEMENT_ARRAY_BUFFER, mesh.ebo());
-
             gl::DrawElements(
                 gl::TRIANGLES, //Draw mode
-                mesh.indices_count() as i32, //Number of indices
+                drawcall.mesh.indices_count() as i32, //Number of indices
                 gl::UNSIGNED_INT,
                 0 as *const gl::types::GLvoid, //Starting index
             );
-        }
-
-        //Unbind everything
-        unsafe {
-            gl::BindTexture(gl::TEXTURE_2D, 0);
-            gl::BindVertexArray(0);
-            gl::BindBuffer(gl::ELEMENT_ARRAY_BUFFER, 0);
         }
 
         Ok(())

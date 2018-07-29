@@ -1,5 +1,5 @@
 use maths::{Vector2f, Vector2i, Vector2u};
-use super::{Texture, TextureID};
+use super::Texture;
 
 ///Represents an OpenGL texture sliced into sprites.
 #[derive(Copy, Clone, Debug)]
@@ -22,7 +22,7 @@ impl SpriteSheet {
         }
     }
 
-    pub fn texture_id(&self) -> TextureID { self.texture.id() }
+    pub fn texture(&self) -> Texture { self.texture }
 
     pub fn sprite_size(&self) -> Vector2u { self.sprite_size }
 
@@ -56,7 +56,7 @@ impl Sprite {
         }
     }
 
-    pub fn texture_id(&self) -> TextureID { self.sheet.texture_id() }
+    pub fn texture(&self) -> Texture { self.sheet.texture() }
 
     pub fn gl_position(&self) -> Vector2f { self.sheet.gl_position(self.position) }
 

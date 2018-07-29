@@ -50,15 +50,15 @@ impl Vertex {
 ///Represents a mesh that is loaded in OpenGL.
 #[derive(Copy, Clone, Debug)]
 pub struct Mesh {
-    vao: gl::types::GLuint,
     ebo: gl::types::GLuint,
+    vao: gl::types::GLuint,
     vertex_count: usize,
     indices_count: usize,
 }
 
 impl Mesh {
-    pub fn vao(&self) -> gl::types::GLuint { self.vao }
     pub fn ebo(&self) -> gl::types::GLuint { self.ebo }
+    pub fn vao(&self) -> gl::types::GLuint { self.vao }
 
     pub fn vertex_count(&self) -> usize { self.vertex_count }
     pub fn indices_count(&self) -> usize { self.indices_count }
@@ -70,6 +70,32 @@ impl Mesh {
         Ok(())
     }
 }
+
+impl PartialEq for Mesh {
+    fn eq(&self, other: &Self) -> bool {
+        self.ebo == other.ebo && self.vao == other.vao
+    }
+}
+
+impl Eq for Mesh {}
+
+impl PartialOrd for Mesh {
+    fn partial_cmp(&self, other: &Self) -> Option<std::cmp::Ordering> {
+        Some(self.cmp(other))
+    }
+}
+
+impl Ord for Mesh {
+    fn cmp(&self, other: &Self) -> std::cmp::Ordering {
+        //Sort by EBO, then VAO
+        if self.ebo != other.ebo {
+            return self.ebo.cmp(&other.ebo);
+        } else {
+            return self.vao.cmp(&other.vao);
+        }
+    }
+}
+
 
 #[derive(Debug)]
 pub struct MeshBuilder {

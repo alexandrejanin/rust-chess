@@ -1,6 +1,5 @@
 use std::ops::{Add, AddAssign, Div, DivAssign, Mul, MulAssign, Sub, SubAssign};
 
-pub mod transform;
 mod vector;
 mod matrix;
 
