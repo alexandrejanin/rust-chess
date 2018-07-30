@@ -12,6 +12,10 @@ pub struct OrthographicCamera {
     size: Vector3f,
 }
 
+//=====================
+// Orthographic Camera
+//=====================
+
 impl OrthographicCamera {
     pub fn from_width(position: Vector3f, width: f32, depth: f32, screen_size: Vector2u) -> Self {
         let ratio = screen_size.y as f32 / screen_size.x as f32;
@@ -60,10 +64,22 @@ impl Camera for OrthographicCamera {
         mat[(1, 1)] = 2.0 / (top - bottom);
         mat[(2, 2)] = -2.0 / (far - near);
 
-        mat[(3, 0)] = -(right + left) / (right - left);
-        mat[(3, 1)] = -(top + bottom) / (top - bottom);
-        mat[(3, 2)] = -(far + near) / (far - near);
+        mat[(0, 3)] = -(right + left) / (right - left);
+        mat[(1, 3)] = -(top + bottom) / (top - bottom);
+        mat[(2, 3)] = -(far + near) / (far - near);
 
         mat
     }
 }
+
+
+//====================
+// Perspective Camera
+//====================
+
+pub struct PerspectiveCamera {
+    position: Vector3f,
+
+    fov: f32,
+}
+

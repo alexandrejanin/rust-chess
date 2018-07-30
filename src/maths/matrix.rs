@@ -4,12 +4,14 @@ use std::ops::{Add, AddAssign, Index, IndexMut, Mul, MulAssign, Sub, SubAssign};
 ///Elements can be accessed from a tuple (column, row) or index (0..16)
 #[repr(C)]
 #[derive(Copy, Clone, PartialEq, Debug)]
-pub struct Matrix4([f32; 16]);
+pub struct Matrix4 {
+    array: [f32; 16]
+}
 
 impl Matrix4 {
     ///Initializes a zero-filled matrix.
     pub fn zero() -> Self {
-        Matrix4([0.0; 16])
+        Matrix4::from_col([0.0; 16])
     }
 
     ///Initializes an identity matrix.
@@ -32,28 +34,31 @@ impl Matrix4 {
             arr.swap(*i, j);
         }
 
-        return Matrix4(arr);
+        Matrix4 { array: arr }
     }
 
     ///Initializes matrix from column-major array
-    pub fn new_col(arr: [f32; 16]) -> Self {
-        Matrix4(arr)
+    pub fn from_col(arr: [f32; 16]) -> Self {
+        Matrix4 { array: arr }
     }
 
-    fn get(&self, x: usize, y: usize) -> &f32 {
-        &self.0[4 * (x % 4) + (y % 4)]
+    ///Get reference to the y-th row and x-th column (0-indexed)
+    fn get(&self, y: usize, x: usize) -> &f32 {
+        &self.array[4 * (x % 4) + (y % 4)]
     }
 
+    ///Get mutable reference to the y-th row and x-th column (0-indexed)
     fn get_mut(&mut self, x: usize, y: usize) -> &mut f32 {
-        &mut self.0[4 * (x % 4) + (y % 4)]
+        &mut self.array[4 * (x % 4) + (y % 4)]
     }
 
+    ///Get pointer to the first value, to use with OpenGL.
     pub fn as_ptr(&self) -> *const f32 {
         self.get(0, 0) as *const f32
     }
 }
 
-//Access elements by tuple index (column, row)
+//Access elements by tuple index (row, column)
 
 impl Index<(usize, usize)> for Matrix4 {
     type Output = f32;
@@ -75,13 +80,13 @@ impl Index<usize> for Matrix4 {
     type Output = f32;
 
     fn index(&self, index: usize) -> &f32 {
-        &self.0[index % 16]
+        &self.array[index % 16]
     }
 }
 
 impl IndexMut<usize> for Matrix4 {
     fn index_mut(&mut self, index: usize) -> &mut f32 {
-        &mut self.0[index % 16]
+        &mut self.array[index % 16]
     }
 }
 
@@ -97,7 +102,7 @@ impl Add for Matrix4 {
             arr[i] = self[i] + other[i];
         }
 
-        Matrix4(arr)
+        Matrix4::from_col(arr)
     }
 }
 
@@ -121,7 +126,7 @@ impl Sub for Matrix4 {
             arr[i] = self[i] - other[i];
         }
 
-        Matrix4(arr)
+        Matrix4::from_col(arr)
     }
 }
 
@@ -153,7 +158,7 @@ impl Mul<f32> for Matrix4 {
             arr[i] = self[i] * other;
         }
 
-        Matrix4(arr)
+        Matrix4::from_col(arr)
     }
 }
 
@@ -176,7 +181,7 @@ impl Mul for Matrix4 {
         for y in 0..4 {
             for x in 0..4 {
                 for i in 0..4 {
-                    mat[(x, y)] += self[(i, y)] * other[(x, i)]
+                    mat[(y, x)] += self[(y, i)] * other[(i, x)]
                 }
             }
         }
