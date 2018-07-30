@@ -1,4 +1,5 @@
 // Load extern crates
+extern crate floating_duration;
 extern crate gl;
 extern crate image;
 extern crate rand;
@@ -7,13 +8,14 @@ extern crate sdl2;
 #[macro_use]
 extern crate serde;
 
+use floating_duration::TimeAsFloat;
 
 use graphics::{
-    camera::OrthographicCamera,
+    camera::{OrthographicCamera, PerspectiveCamera},
     manager::GraphicsManager,
     sprites
 };
-use maths::{Vector2i, Vector2u};
+use maths::{Vector2i, Vector2u, Vector3f};
 use std::path::Path;
 use std::time::{Duration, SystemTime};
 use transform::Transform;
@@ -70,9 +72,11 @@ fn main() {
 
     //Create transform
     let mut transform = Transform::new();
+    let mut transform2 = Transform::new();
 
     //Create camera
-    let mut camera = OrthographicCamera::from_width((3.0, 1.0, -10.0).into(), 10.0, 100.0, graphics_manager.window_size());
+    //let mut ortho_camera = OrthographicCamera::from_width((0.0, 1.0, 10.0).into(), 5.0, 100.0, graphics_manager.window_size());
+    let mut camera = PerspectiveCamera::new(Vector3f::new(0.0, 0.0, 10.0), 60.0, 0.1, 100.0);
 
 
     println!("Startup took {} ms.", (SystemTime::now().duration_since(start_time)).unwrap().subsec_millis());
@@ -88,7 +92,7 @@ fn main() {
                     match win_event {
                         sdl2::event::WindowEvent::SizeChanged(width, height) => {
                             graphics_manager.resize(width, height);
-                            camera.resize_keep_width((width as u32, height as u32).into())
+                            //camera.resize_keep_width((width as u32, height as u32).into())
                         },
                         _ => {}
                     },
@@ -103,11 +107,19 @@ fn main() {
         if input_manager.get_key_pressed(sdl2::keyboard::Keycode::Up) { sprite.position.y -= 1 }
         if input_manager.get_key_pressed(sdl2::keyboard::Keycode::Down) { sprite.position.y += 1 }
 
+        let elapsed_seconds = SystemTime::now().duration_since(start_time).unwrap().as_fractional_secs();
+
+        transform.position.y = (elapsed_seconds / 2.0).cos() as f32;
+        transform.position.x = (elapsed_seconds / 2.0).sin() as f32;
+
+        transform2.position.z = elapsed_seconds.sin() as f32;
+
         //Clear
         graphics_manager.clear();
 
         //Draw
         graphics_manager.draw_sprite(sprite, transform, Some(&camera));
+        graphics_manager.draw_sprite(sprite, transform2, Some(&camera));
 
         //Render
         graphics_manager.render().expect("ERROR: Rendering failed, exiting.");

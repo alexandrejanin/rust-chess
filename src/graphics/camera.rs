@@ -1,3 +1,4 @@
+use std::f32::consts::PI;
 use maths::{Matrix4f, Vector2u, Vector3f};
 
 pub trait Camera {
@@ -7,7 +8,7 @@ pub trait Camera {
 ///A camera with an orthographic projection.
 pub struct OrthographicCamera {
     ///Position of the camera in world space.
-    position: Vector3f,
+    pub position: Vector3f,
     ///Size of the camera in world space.
     size: Vector3f,
 }
@@ -78,8 +79,42 @@ impl Camera for OrthographicCamera {
 //====================
 
 pub struct PerspectiveCamera {
-    position: Vector3f,
+    ///Position of the camera in world space.
+    pub position: Vector3f,
 
-    fov: f32,
+    ///Horizontal FOV in degrees.
+    pub fov: f32,
+
+    ///Near plane distance.
+    pub near: f32,
+
+    ///Far plane distance.
+    pub far: f32,
 }
 
+impl PerspectiveCamera {
+    pub fn new(position: Vector3f, fov: f32, near: f32, far: f32) -> Self {
+        Self {
+            position,
+            fov,
+            near,
+            far,
+        }
+    }
+}
+
+impl Camera for PerspectiveCamera {
+    fn matrix(&self) -> Matrix4f {
+        let s = 1.0 / ((self.fov / 2.0) * (PI / 180.0)).tan();
+        let f = -self.far / (self.far - self.near);
+
+        return Matrix4f::identity();
+
+        Matrix4f::from_col([
+            s, 0.0, 0.0, 0.0,
+            0.0, s, 0.0, 0.0,
+            0.0, 0.0, f, -1.0,
+            0.0, 0.0, self.near * f, 0.0,
+        ])
+    }
+}

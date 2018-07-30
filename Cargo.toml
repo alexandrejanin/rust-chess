@@ -7,6 +7,7 @@ authors = ["Alexandre Janin <alexandrejanin92@gmail.com>"]
 fs_extra = "*"
 
 [dependencies]
+floating-duration = "*"
 rand = "*"
 gl = "*"
 image = "*"

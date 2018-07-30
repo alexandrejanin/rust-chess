@@ -126,7 +126,7 @@ impl<'a> GraphicsManager<'a> {
         let program = Program::load_shaders(resource_loader, Path::new("shaders/triangle.vert"), Path::new("shaders/triangle.frag"))?;
 
         //Build quad mesh
-        let mesh_builder = MeshBuilder {
+        let quad_builder = MeshBuilder {
             vertices: vec![
                 Vertex { position: Vector3f::new(0.5, 0.5, 0.0), uv: Vector2f::new(1.0, 0.0) },  //Top right,
                 Vertex { position: Vector3f::new(0.5, -0.5, 0.0), uv: Vector2f::new(1.0, 1.0) },  //Bottom right
@@ -140,18 +140,7 @@ impl<'a> GraphicsManager<'a> {
             ],
         };
 
-        let quad = mesh_builder.build();
-
-
-        unsafe {
-            let mut vert = 0;
-            let mut frag = 0;
-            gl::GetIntegerv(gl::MAX_VERTEX_UNIFORM_COMPONENTS, &mut vert);
-            gl::GetIntegerv(gl::MAX_FRAGMENT_UNIFORM_COMPONENTS, &mut frag);
-            println!("vert: {}", vert);
-            println!("frag: {}", frag);
-        }
-
+        let quad = quad_builder.build();
 
         //Build and return graphics manager
         Ok(Self {

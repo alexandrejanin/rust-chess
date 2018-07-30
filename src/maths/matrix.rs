@@ -26,7 +26,7 @@ impl Matrix4 {
     }
 
     ///Initializes matrix from row-major array
-    pub fn new_row(mut arr: [f32; 16]) -> Self {
+    pub fn from_row(mut arr: [f32; 16]) -> Self {
         //Cells that need to be swapped to go from row to col
         for i in [1, 2, 3, 6, 7, 11].iter() {
             //Get target cell in converted matrix
@@ -48,7 +48,7 @@ impl Matrix4 {
     }
 
     ///Get mutable reference to the y-th row and x-th column (0-indexed)
-    fn get_mut(&mut self, x: usize, y: usize) -> &mut f32 {
+    fn get_mut(&mut self, y: usize, x: usize) -> &mut f32 {
         &mut self.array[4 * (x % 4) + (y % 4)]
     }
 

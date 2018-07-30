@@ -3,6 +3,7 @@ use std::ops::{Add, AddAssign, Div, DivAssign, Mul, MulAssign, Sub, SubAssign};
 mod vector;
 mod matrix;
 
+
 //Vector types
 
 pub type Vector2f = vector::Vector2<f32>;
@@ -18,7 +19,6 @@ pub type Vector2u = vector::Vector2<u32>;
 //pub type Vector3u = vector::Vector3<u32>;
 
 pub type Matrix4f = matrix::Matrix4;
-
 
 //Num
 

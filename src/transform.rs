@@ -8,11 +8,39 @@ pub struct Transform {
 }
 
 impl Transform {
+    ///Create a transform with base position, scale, and rotation.
     pub fn new() -> Self {
         Self {
             position: Vector3f::new(0.0, 0.0, 0.0),
             scale: Vector3f::new(1.0, 1.0, 1.0),
             rotation: Vector3f::new(0.0, 0.0, 0.0),
+        }
+    }
+
+    ///Create a transform at set position, with base scale and rotation.
+    pub fn from_position(position: Vector3f) -> Self {
+        Self {
+            position,
+            scale: Vector3f::new(1.0, 1.0, 1.0),
+            rotation: Vector3f::new(0.0, 0.0, 0.0),
+        }
+    }
+
+    ///Create a transform with set scale, with base position and rotation.
+    pub fn from_scale(scale: Vector3f) -> Self {
+        Self {
+            position: Vector3f::new(0.0, 0.0, 0.0),
+            scale,
+            rotation: Vector3f::new(0.0, 0.0, 0.0),
+        }
+    }
+
+    ///Create a transform with set rotation, with base position and scale.
+    pub fn from_rotation(rotation: Vector3f) -> Self {
+        Self {
+            position: Vector3f::new(0.0, 0.0, 0.0),
+            scale: Vector3f::new(1.0, 1.0, 1.0),
+            rotation,
         }
     }
 
@@ -30,7 +58,7 @@ impl Transform {
         mat;
         */
 
-        Matrix4f::new_row([
+        Matrix4f::from_row([
             self.scale.x, 0., 0., self.position.x,
             0., self.scale.y, 0., self.position.y,
             0., 0., self.scale.z, self.position.z,
