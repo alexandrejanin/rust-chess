@@ -1,37 +1,33 @@
-use std::ops::{Add, AddAssign, Div, DivAssign, Mul, MulAssign, Sub, SubAssign};
+use cgmath;
 
-mod vector;
-mod matrix;
+//Point types
+pub type Point2f = cgmath::Point2<f32>;
+pub type Point3f = cgmath::Point3<f32>;
+
+pub type Point2i = cgmath::Point2<i32>;
+pub type Point3i = cgmath::Point3<i32>;
+
+pub type Point2u = cgmath::Point2<u32>;
+pub type Point3u = cgmath::Point3<u32>;
 
 
 //Vector types
 
-pub type Vector2f = vector::Vector2<f32>;
+pub type Vector2f = cgmath::Vector2<f32>;
+pub type Vector3f = cgmath::Vector3<f32>;
 
-pub type Vector3f = vector::Vector3<f32>;
+pub type Vector2i = cgmath::Vector2<i32>;
+pub type Vector3i = cgmath::Vector3<i32>;
 
-pub type Vector2i = vector::Vector2<i32>;
+pub type Vector2u = cgmath::Vector2<u32>;
+pub type Vector3u = cgmath::Vector3<u32>;
 
-//pub type Vector3i = vector::Vector3<i32>;
 
-pub type Vector2u = vector::Vector2<u32>;
+//Matrix
 
-//pub type Vector3u = vector::Vector3<u32>;
+pub type Matrix4f = cgmath::Matrix4<f32>;
 
-pub type Matrix4f = matrix::Matrix4;
 
-//Num
+//Quaternion
 
-///Defines a number that can be a member of a vector.
-pub trait Num<Rhs = Self, Output = Self>: Copy +
-Add<Rhs, Output=Output> + AddAssign<Rhs> +
-Sub<Rhs, Output=Output> + SubAssign<Rhs> +
-Mul<Rhs, Output=Output> + MulAssign<Rhs> +
-Div<Rhs, Output=Output> + DivAssign<Rhs> {}
-
-//Automatically implement Num for all valid structs
-impl<T> Num for T where T: Copy +
-Add<Self, Output=Self> + AddAssign<Self> +
-Sub<Self, Output=Self> + SubAssign<Self> +
-Mul<Self, Output=Self> + MulAssign<Self> +
-Div<Self, Output=Self> + DivAssign<Self> {}
+pub type Quaternion = cgmath::Quaternion<f32>;

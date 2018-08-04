@@ -9,9 +9,12 @@ fs_extra = "*"
 [dependencies]
 floating-duration = "*"
 rand = "*"
+
+sdl2 = "*"
 gl = "*"
+cgmath = "*"
+
 image = "*"
 ron = "*"
 serde = "*"
-sdl2 = "*"
 

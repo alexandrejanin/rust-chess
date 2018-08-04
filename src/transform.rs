@@ -56,13 +56,20 @@ impl Transform {
         for i in 0..3 { mat[(i, i)] = self.scale[i] };
 
         mat;
-        */
 
-        Matrix4f::from_row([
+        Matrix4f::new(
             self.scale.x, 0., 0., self.position.x,
             0., self.scale.y, 0., self.position.y,
             0., 0., self.scale.z, self.position.z,
             0., 0., 0., 1.,
-        ])
+        )
+        */
+
+        Matrix4f::new(
+            self.scale.x, 0., 0., 0.,
+            0., self.scale.y, 0., 0.,
+            0., 0., self.scale.z, 0.,
+            self.position.x, self.position.y, self.position.z, 1.,
+        )
     }
 }

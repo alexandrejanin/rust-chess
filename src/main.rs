@@ -1,5 +1,6 @@
 // Load extern crates
 extern crate floating_duration;
+extern crate cgmath;
 extern crate gl;
 extern crate image;
 extern crate rand;
@@ -11,11 +12,11 @@ extern crate serde;
 use floating_duration::TimeAsFloat;
 
 use graphics::{
-    camera::{OrthographicCamera, PerspectiveCamera},
+    camera::Camera,
     manager::GraphicsManager,
     sprites
 };
-use maths::{Vector2i, Vector2u, Vector3f};
+use maths::{Point3f, Vector2i, Vector2u, Vector3f};
 use std::path::Path;
 use std::time::{Duration, SystemTime};
 use transform::Transform;
@@ -33,6 +34,7 @@ mod transform;
 fn main() {
     //Initialize time
     let start_time = SystemTime::now();
+    let mut last_time = start_time;
 
     //Initialize ResourceLoader
     let resource_loader = resources::ResourceLoader::new()
@@ -69,19 +71,35 @@ fn main() {
 
     //Create sprites
     let mut sprite = sprites::Sprite::new(terrain_sheet, Vector2i::new(3, 0));
+    let mut sprite2 = sprites::Sprite::new(terrain_sheet, Vector2i::new(0, 0));
 
-    //Create transform
+    //Create transforms
     let mut transform = Transform::new();
     let mut transform2 = Transform::new();
 
     //Create camera
-    let mut camera = Camera::new(Vector3f::new(0.0, 0.0, 10.0), 60.0, 0.1, 100.0);
+    let mut camera = Camera::from_width(
+        Point3f::new(-5.0, 0.0, 10.0), Vector3f::new(0.5, 0.0, -1.0),
+        true,
+        0.1, 100.0,
+        60.0, graphics_manager.window_size()
+    );
+    let mut cam_angle = 0.0;
 
     println!("Startup took {} ms.", (SystemTime::now().duration_since(start_time)).unwrap().subsec_millis());
 
-
     //Main loop
     'main: loop {
+        //Current time
+        let now = SystemTime::now();
+
+        //Total elapsed time
+        let elapsed_seconds = now.duration_since(start_time).unwrap().as_fractional_secs();
+
+        //Delta time
+        let delta_time = now.duration_since(last_time).unwrap().as_fractional_secs();
+        last_time = now;
+
         //Handle events
         for event in events.poll_iter() {
             match event {
@@ -98,6 +116,7 @@ fn main() {
             }
         }
 
+        //Update input manager
         input_manager.update(&events);
 
         if input_manager.get_key_pressed(sdl2::keyboard::Keycode::Left) { sprite.position.x -= 1 }
@@ -105,19 +124,26 @@ fn main() {
         if input_manager.get_key_pressed(sdl2::keyboard::Keycode::Up) { sprite.position.y -= 1 }
         if input_manager.get_key_pressed(sdl2::keyboard::Keycode::Down) { sprite.position.y += 1 }
 
-        let elapsed_seconds = SystemTime::now().duration_since(start_time).unwrap().as_fractional_secs();
+        if input_manager.get_key_down(sdl2::keyboard::Keycode::A) { cam_angle -= delta_time }
+        if input_manager.get_key_down(sdl2::keyboard::Keycode::D) { cam_angle += delta_time }
 
-        transform.position.y = (elapsed_seconds / 2.0).cos() as f32;
-        transform.position.x = (elapsed_seconds / 2.0).sin() as f32;
 
-        transform2.position.z = 10.0 * elapsed_seconds.sin() as f32;
+        //make sprite orbit vertically around origin
+        transform.position.y = elapsed_seconds.cos() as f32;
+        transform.position.x = elapsed_seconds.sin() as f32;
+
+        //make camera orbit around origin
+        camera.position.z = 10.0 * cam_angle.cos() as f32;
+        camera.position.x = 10.0 * cam_angle.sin() as f32;
+
+        camera.look_at(Point3f::new(0.0, 1.0, 0.0));
 
         //Clear
         graphics_manager.clear();
 
         //Draw
         graphics_manager.draw_sprite(sprite, transform, Some(&camera));
-        graphics_manager.draw_sprite(sprite, transform2, Some(&camera));
+        graphics_manager.draw_sprite(sprite2, transform2, Some(&camera));
 
         //Render
         graphics_manager.render().expect("ERROR: Rendering failed, exiting.");

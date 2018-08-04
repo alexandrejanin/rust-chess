@@ -1,3 +1,4 @@
+use cgmath::{Array, Matrix};
 use gl;
 use maths::{Matrix4f, Vector2f};
 use resources::{self, ResourceLoader};
