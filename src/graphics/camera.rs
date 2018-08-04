@@ -108,13 +108,11 @@ impl Camera for PerspectiveCamera {
         let s = 1.0 / ((self.fov / 2.0) * (PI / 180.0)).tan();
         let f = -self.far / (self.far - self.near);
 
-        return Matrix4f::identity();
-
         Matrix4f::from_col([
             s, 0.0, 0.0, 0.0,
             0.0, s, 0.0, 0.0,
-            0.0, 0.0, f, -1.0,
-            0.0, 0.0, self.near * f, 0.0,
+            0.0, 0.0, f, self.near * f,
+            0.0, 0.0, -1.0, 0.0,
         ])
     }
 }

@@ -10,9 +10,7 @@ pub struct Matrix4 {
 
 impl Matrix4 {
     ///Initializes a zero-filled matrix.
-    pub fn zero() -> Self {
-        Matrix4::from_col([0.0; 16])
-    }
+    pub fn zero() -> Self { Matrix4::from_col([0.0; 16]) }
 
     ///Initializes an identity matrix.
     pub fn identity() -> Self {
@@ -26,36 +24,32 @@ impl Matrix4 {
     }
 
     ///Initializes matrix from row-major array
-    pub fn from_row(mut arr: [f32; 16]) -> Self {
+    pub fn from_row(mut arr: [f32; 16]) -> Self { Matrix4::from_col(arr).transpose() }
+
+    ///Initializes matrix from column-major array
+    pub fn from_col(array: [f32; 16]) -> Self { Matrix4 { array } }
+
+    ///Get reference to the y-th row and x-th column (0-indexed)
+    fn get(&self, y: usize, x: usize) -> &f32 { &self.array[4 * (x % 4) + (y % 4)] }
+
+    ///Get mutable reference to the y-th row and x-th column (0-indexed)
+    fn get_mut(&mut self, y: usize, x: usize) -> &mut f32 { &mut self.array[4 * (x % 4) + (y % 4)] }
+
+    ///Returns a transposed copy of the matrix.
+    pub fn transpose(&self) -> Self {
+        let mut array = self.array;
         //Cells that need to be swapped to go from row to col
         for i in [1, 2, 3, 6, 7, 11].iter() {
             //Get target cell in converted matrix
             let j = (4 * i) % 16 + i / 4;
-            arr.swap(*i, j);
+            array.swap(*i, j);
         }
 
-        Matrix4 { array: arr }
-    }
-
-    ///Initializes matrix from column-major array
-    pub fn from_col(arr: [f32; 16]) -> Self {
-        Matrix4 { array: arr }
-    }
-
-    ///Get reference to the y-th row and x-th column (0-indexed)
-    fn get(&self, y: usize, x: usize) -> &f32 {
-        &self.array[4 * (x % 4) + (y % 4)]
-    }
-
-    ///Get mutable reference to the y-th row and x-th column (0-indexed)
-    fn get_mut(&mut self, y: usize, x: usize) -> &mut f32 {
-        &mut self.array[4 * (x % 4) + (y % 4)]
+        Matrix4 { array }
     }
 
     ///Get pointer to the first value, to use with OpenGL.
-    pub fn as_ptr(&self) -> *const f32 {
-        self.get(0, 0) as *const f32
-    }
+    pub fn as_ptr(&self) -> *const f32 { self.get(0, 0) as *const f32 }
 }
 
 //Access elements by tuple index (row, column)
@@ -63,15 +57,11 @@ impl Matrix4 {
 impl Index<(usize, usize)> for Matrix4 {
     type Output = f32;
 
-    fn index(&self, index: (usize, usize)) -> &f32 {
-        self.get(index.0, index.1)
-    }
+    fn index(&self, index: (usize, usize)) -> &f32 { self.get(index.0, index.1) }
 }
 
 impl IndexMut<(usize, usize)> for Matrix4 {
-    fn index_mut(&mut self, index: (usize, usize)) -> &mut f32 {
-        self.get_mut(index.0, index.1)
-    }
+    fn index_mut(&mut self, index: (usize, usize)) -> &mut f32 { self.get_mut(index.0, index.1) }
 }
 
 //Access elements by index in array (0-15)
@@ -79,15 +69,11 @@ impl IndexMut<(usize, usize)> for Matrix4 {
 impl Index<usize> for Matrix4 {
     type Output = f32;
 
-    fn index(&self, index: usize) -> &f32 {
-        &self.array[index % 16]
-    }
+    fn index(&self, index: usize) -> &f32 { &self.array[index % 16] }
 }
 
 impl IndexMut<usize> for Matrix4 {
-    fn index_mut(&mut self, index: usize) -> &mut f32 {
-        &mut self.array[index % 16]
-    }
+    fn index_mut(&mut self, index: usize) -> &mut f32 { &mut self.array[index % 16] }
 }
 
 //Matrix Addition
@@ -143,9 +129,7 @@ impl SubAssign for Matrix4 {
 impl Mul<Matrix4> for f32 {
     type Output = Matrix4;
 
-    fn mul(self, other: Matrix4) -> Matrix4 {
-        other * self
-    }
+    fn mul(self, other: Matrix4) -> Matrix4 { other * self }
 }
 
 impl Mul<f32> for Matrix4 {

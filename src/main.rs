@@ -75,9 +75,7 @@ fn main() {
     let mut transform2 = Transform::new();
 
     //Create camera
-    //let mut ortho_camera = OrthographicCamera::from_width((0.0, 1.0, 10.0).into(), 5.0, 100.0, graphics_manager.window_size());
-    let mut camera = PerspectiveCamera::new(Vector3f::new(0.0, 0.0, 10.0), 60.0, 0.1, 100.0);
-
+    let mut camera = Camera::new(Vector3f::new(0.0, 0.0, 10.0), 60.0, 0.1, 100.0);
 
     println!("Startup took {} ms.", (SystemTime::now().duration_since(start_time)).unwrap().subsec_millis());
 
@@ -112,7 +110,7 @@ fn main() {
         transform.position.y = (elapsed_seconds / 2.0).cos() as f32;
         transform.position.x = (elapsed_seconds / 2.0).sin() as f32;
 
-        transform2.position.z = elapsed_seconds.sin() as f32;
+        transform2.position.z = 10.0 * elapsed_seconds.sin() as f32;
 
         //Clear
         graphics_manager.clear();

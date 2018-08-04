@@ -27,8 +27,10 @@ fn main() {
         buffer_size: 64_000,
     };
 
+    //Remove res directory
+    fs_extra::dir::remove(&executable_path.join("res")).expect("Error: could not remove 'res' directory.");
+
     //Copy res directory
-    fs_extra::dir::remove(&executable_path.join("res"));
     if let Err(error) = fs_extra::dir::copy(
         &manifest_dir.join("res"),
         &executable_path.join("res"),
