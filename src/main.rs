@@ -66,7 +66,7 @@ fn main() {
                                           .expect(&format!("ERROR: Could not load texture from '{:?}'", terrain_path));
 
     //Create sprite sheet
-    let terrain_sheet = sprites::SpriteSheet::new(terrain_texture, Vector2u::new(16, 16));
+    let terrain_sheet = sprites::SpriteSheet::new(graphics_manager.quad().vao(), terrain_texture, Vector2u::new(16, 16));
 
     //Orbiting sprite
     let mut sprite = sprites::Sprite::new(terrain_sheet, Vector2i::new(3, 0));
@@ -156,8 +156,9 @@ fn main() {
         //Clear
         graphics_manager.clear();
 
+
         //Draw
-        for _ in 0..1000 {
+        for _ in 0..333 {
             graphics_manager.draw_sprite(sprite, transform, Some(&camera));
             graphics_manager.draw_sprite(sprite2, transform2, Some(&camera));
             graphics_manager.draw_sprite(ui_sprite, ui_transform, Some(&ui_camera));
@@ -165,8 +166,6 @@ fn main() {
 
         //Render
         graphics_manager.render().expect("ERROR: Rendering failed, exiting.");
-
-        println!("{} FPS", 1.0 / delta_time);
 
         //Limit fps
         //std::thread::sleep(Duration::from_millis(1));

@@ -1,19 +1,15 @@
-use cgmath::One;
-use maths::{Matrix4f, Vector2f};
-use std::slice::Iter;
-use super::{mesh::Mesh, shaders::Program, Texture};
-
-
-//Max number of objects in a draw call
-const BATCH_SIZE: usize = 150;
+use gl;
+use maths::{Matrix4f, Vector4f};
+use std::{mem::size_of, slice::Iter};
+use super::{mesh::Mesh, shaders::Program, sprites::{DATA_LENGTH, MAX_INSTANCES}, Texture};
 
 #[derive(Debug)]
 pub struct DrawCall {
     pub program: Program,
     pub mesh: Mesh,
     pub texture: Texture,
-    pub tex_position: Vector2f,
-    pub tex_size: Vector2f,
+    pub vbo: gl::types::GLuint,
+    pub tex_position: Vector4f,
     pub matrix: Matrix4f,
 }
 
@@ -26,13 +22,12 @@ pub struct Batch {
     ///Texture to be rendered.
     texture: Texture,
 
-    ///Array of each object's upper right corner on the texture to sample (in OpenGL coordinates)
-    tex_positions: [Vector2f; BATCH_SIZE],
-    ///Array of each object's size on the texture to sample (in OpenGL coordinates)
-    tex_sizes: [Vector2f; BATCH_SIZE],
+    ///VBO containing transform matrices and texture info for each object
+    vbo: gl::types::GLuint,
 
-    ///Transform matrix to apply to each object.
-    matrices: [Matrix4f; BATCH_SIZE],
+    //TODO: replace with Vec
+    ///Stores the objects' info before it is passed to the VBO
+    buffer: [f32; DATA_LENGTH * MAX_INSTANCES],
 
     ///Current amount of objects in the batch
     obj_count: usize,
@@ -43,10 +38,6 @@ impl Batch {
     pub fn mesh(&self) -> Mesh { self.mesh }
     pub fn texture(&self) -> Texture { self.texture }
 
-    pub fn tex_positions(&self) -> &[Vector2f] { &self.tex_positions[..self.obj_count] }
-    pub fn tex_sizes(&self) -> &[Vector2f] { &self.tex_sizes[..self.obj_count] }
-    pub fn matrices(&self) -> &[Matrix4f] { &self.matrices[..self.obj_count] }
-
     pub fn obj_count(&self) -> usize { self.obj_count }
 
     ///Creates an empty batch from specified drawcall.
@@ -55,9 +46,8 @@ impl Batch {
             program: drawcall.program,
             mesh: drawcall.mesh,
             texture: drawcall.texture,
-            tex_positions: [Vector2f::new(0.0, 0.0); BATCH_SIZE],
-            tex_sizes: [Vector2f::new(1.0, 1.0); BATCH_SIZE],
-            matrices: [Matrix4f::one(); BATCH_SIZE],
+            vbo: drawcall.vbo,
+            buffer: [0.0; DATA_LENGTH * MAX_INSTANCES],
             obj_count: 0,
         };
 
@@ -68,19 +58,40 @@ impl Batch {
 
     ///Adds an object to the batch. Returns false if the batch is full.
     pub fn add(&mut self, drawcall: &DrawCall) -> bool {
+        //TODO: check that batch and drawcall match?
+
         //Check if batch is full
-        if self.obj_count >= BATCH_SIZE {
+        if self.obj_count >= MAX_INSTANCES {
             return false;
         }
 
-        //Add object to batch
-        self.tex_positions[self.obj_count] = drawcall.tex_position;
-        self.tex_sizes[self.obj_count] = drawcall.tex_size;
-        self.matrices[self.obj_count] = drawcall.matrix;
+        let start_index = self.obj_count * DATA_LENGTH;
+
+        //Load tex position in buffer
+        for i in 0..4 {
+            self.buffer[start_index + i] = drawcall.tex_position[i];
+        }
+
+        //Load matrix in buffer
+        for i in 0..16 {
+            self.buffer[start_index + 4 + i] = drawcall.matrix[i / 4][i % 4];
+        }
 
         self.obj_count += 1;
 
         true
+    }
+
+    pub fn buffer_data(&self) {
+        unsafe {
+            gl::BindBuffer(gl::ARRAY_BUFFER, self.vbo);
+            gl::BufferData(
+                gl::ARRAY_BUFFER,
+                (size_of::<f32>() * self.obj_count * DATA_LENGTH) as gl::types::GLsizeiptr,
+                self.buffer.as_ptr() as *const gl::types::GLvoid,
+                gl::STREAM_DRAW
+            );
+        }
     }
 }
 

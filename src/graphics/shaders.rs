@@ -1,6 +1,6 @@
 use cgmath::{Array, Matrix};
 use gl;
-use maths::{Matrix4f, Vector2f};
+use maths::{Matrix4f, Vector2f, Vector4f};
 use resources::{self, ResourceLoader};
 use std::{
     self,
@@ -61,11 +61,11 @@ impl Program {
     }
 
 
-    ///Attempts to set uniform mat4. Returns success value.
     pub fn set_mat4(&self, name: &str, mat4: &Matrix4f) -> bool { self.set_mat4_arr(name, std::slice::from_ref(mat4)) }
 
-    ///Attempts to set uniform mat4. Returns success value.
     pub fn set_mat4_arr(&self, name: &str, mat4s: &[Matrix4f]) -> bool {
+        if mat4s.is_empty() { return false }
+
         let loc = self.get_uniform_location(name);
         if loc == -1 { return false }
 
@@ -74,15 +74,28 @@ impl Program {
         true
     }
 
-    ///Attempts to set uniform vec2. Returns false if the uniform was not found.
     pub fn set_vec2(&self, name: &str, vec2: &Vector2f) -> bool { self.set_vec2_arr(name, std::slice::from_ref(vec2)) }
 
-    ///Attempts to set uniform vec2. Returns false if the uniform was not found.
     pub fn set_vec2_arr(&self, name: &str, vec2s: &[Vector2f]) -> bool {
+        if vec2s.is_empty() { return false }
+
         let loc = self.get_uniform_location(name);
         if loc == -1 { return false }
 
         unsafe { gl::Uniform2fv(loc, vec2s.len() as gl::types::GLint, vec2s[0].as_ptr()); }
+
+        true
+    }
+
+    pub fn set_vec4(&self, name: &str, vec4: &Vector4f) -> bool { self.set_vec4_arr(name, std::slice::from_ref(vec4)) }
+
+    pub fn set_vec4_arr(&self, name: &str, vec4s: &[Vector4f]) -> bool {
+        if vec4s.is_empty() { return false }
+
+        let loc = self.get_uniform_location(name);
+        if loc == -1 { return false }
+
+        unsafe { gl::Uniform4fv(loc, vec4s.len() as gl::types::GLint, vec4s[0].as_ptr()); }
 
         true
     }

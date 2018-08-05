@@ -50,15 +50,17 @@ impl Vertex {
 ///Represents a mesh that is loaded in OpenGL.
 #[derive(Copy, Clone, Debug)]
 pub struct Mesh {
-    ebo: gl::types::GLuint,
+    vbo: gl::types::GLuint,
     vao: gl::types::GLuint,
+    ebo: gl::types::GLuint,
     vertex_count: usize,
     indices_count: usize,
 }
 
 impl Mesh {
-    pub fn ebo(&self) -> gl::types::GLuint { self.ebo }
+    pub fn vbo(&self) -> gl::types::GLuint { self.vbo }
     pub fn vao(&self) -> gl::types::GLuint { self.vao }
+    pub fn ebo(&self) -> gl::types::GLuint { self.ebo }
 
     pub fn vertex_count(&self) -> usize { self.vertex_count }
     pub fn indices_count(&self) -> usize { self.indices_count }
@@ -155,6 +157,7 @@ impl MeshBuilder {
 
         //Create mesh
         Mesh {
+            vbo,
             vao,
             ebo,
             vertex_count: self.vertices.len(),

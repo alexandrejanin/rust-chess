@@ -4,7 +4,6 @@ use maths::{Vector2f, Vector2u, Vector3f};
 use resources::{self, ResourceLoader};
 use sdl2;
 use std::{
-    self,
     collections::HashMap,
     fmt::{self, Display, Formatter},
     path::{Path, PathBuf},
@@ -79,6 +78,8 @@ pub struct GraphicsManager<'a> {
 
 
 impl<'a> GraphicsManager<'a> {
+    pub fn quad(&self) -> &Mesh { &self.quad }
+
     ///Initializes graphics from SDL and Config object
     pub fn new(resource_loader: &'a ResourceLoader, conf: &'a config::Config, sdl: &'a sdl2::Sdl) -> Result<Self, DrawingError> {
         //Initialize VideoSubsystem
@@ -101,7 +102,7 @@ impl<'a> GraphicsManager<'a> {
 
         //Initialize OpenGL
         let gl_context = window.gl_create_context().unwrap();
-        gl::load_with(|s| video.gl_get_proc_address(s) as *const std::os::raw::c_void);
+        gl::load_with(|s| video.gl_get_proc_address(s) as *const gl::types::GLvoid);
 
         //Enable/disable vsync
         video.gl_set_swap_interval(match conf.display.vsync {
@@ -190,7 +191,7 @@ impl<'a> GraphicsManager<'a> {
                 0,
                 gl::RGBA,
                 gl::UNSIGNED_BYTE,
-                image.as_ptr() as *const std::os::raw::c_void,
+                image.as_ptr() as *const gl::types::GLvoid,
             );
 
             //Texture wrapping
@@ -249,7 +250,7 @@ impl<'a> GraphicsManager<'a> {
     pub fn render(&mut self) -> Result<(), DrawingError> {
         //Render batches
         for batch in self.batches.iter() {
-            Self::draw(batch)?
+            self.draw(batch)?
         }
 
         //Clear queue
@@ -261,7 +262,7 @@ impl<'a> GraphicsManager<'a> {
         Ok(())
     }
 
-    ///Add sprite to render queue.
+    ///Add sprite to batch list.
     pub fn draw_sprite(&mut self, sprite: Sprite, transform: Transform, camera: Option<&Camera>) {
         let matrix = match camera {
             None => transform.matrix(),
@@ -272,38 +273,31 @@ impl<'a> GraphicsManager<'a> {
             program: self.program,
             mesh: self.quad,
             texture: sprite.texture(),
+            vbo: sprite.vbo(),
             tex_position: sprite.gl_position(),
-            tex_size: sprite.gl_size(),
             matrix,
         })
     }
 
     ///Draw a batch.
-    fn draw(batch: &Batch) -> Result<(), DrawingError> {
+    fn draw(&self, batch: &Batch) -> Result<(), DrawingError> {
         //Check that mesh is valid
         batch.mesh().check()?;
 
         //Use program
         batch.program().set_used();
 
-        //Set transform matrix
-        batch.program().set_mat4_arr("transforms", batch.matrices());
-
-        //Set texture coordinates
-        batch.program().set_vec2_arr("SourcePositions", batch.tex_positions());
-        batch.program().set_vec2_arr("SourceSizes", batch.tex_sizes());
-
-
-        //Bind texture
         unsafe {
+            //Bind texture
             gl::BindTexture(gl::TEXTURE_2D, batch.texture().id());
-        }
 
-        //Bind mesh
-        unsafe {
+            //Bind mesh
             gl::BindVertexArray(batch.mesh().vao());
             gl::BindBuffer(gl::ELEMENT_ARRAY_BUFFER, batch.mesh().ebo());
         }
+
+        //Bind objects data
+        batch.buffer_data();
 
         //Draw batch
         unsafe {
