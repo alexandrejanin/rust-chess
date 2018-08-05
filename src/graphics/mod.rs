@@ -5,7 +5,7 @@ use std::cmp::Ordering;
 pub mod camera;
 pub mod manager;
 pub mod sprites;
-mod drawcall;
+mod batches;
 mod mesh;
 mod shaders;
 

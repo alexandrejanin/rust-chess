@@ -3,7 +3,6 @@ use cgmath::{
     Ortho,
     PerspectiveFov,
 };
-
 use maths::{Matrix4f, Point3f, Vector2f, Vector2u, Vector3f};
 
 //Orthographic camera

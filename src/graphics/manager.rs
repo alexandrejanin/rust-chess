@@ -10,8 +10,8 @@ use std::{
     path::{Path, PathBuf},
 };
 use super::{
-    camera::Camera,
-    drawcall::{DrawCall, DrawCallQueue}, mesh::{Mesh, MeshBuilder, Vertex},
+    batches::{Batch, BatchList, DrawCall},
+    camera::Camera, mesh::{Mesh, MeshBuilder, Vertex},
     shaders::{self, Program},
     sprites::Sprite,
     Texture,
@@ -74,7 +74,7 @@ pub struct GraphicsManager<'a> {
     textures: HashMap<PathBuf, Texture>,
 
     ///All draw calls to be rendered this frame.
-    drawcalls: DrawCallQueue,
+    batches: BatchList,
 }
 
 
@@ -153,7 +153,7 @@ impl<'a> GraphicsManager<'a> {
             program,
             quad,
             textures: HashMap::new(),
-            drawcalls: DrawCallQueue::new(),
+            batches: BatchList::with_capacity(10),
         })
     }
 
@@ -247,18 +247,13 @@ impl<'a> GraphicsManager<'a> {
 
     ///Renders the current frame
     pub fn render(&mut self) -> Result<(), DrawingError> {
-        let mut last_program = None;
-        let mut last_mesh = None;
-        let mut last_texture = None;
-
-
-        //Render draw queue
-        for drawcall in self.drawcalls.iter() {
-            Self::draw(drawcall, &mut last_program, &mut last_mesh, &mut last_texture)?
+        //Render batches
+        for batch in self.batches.iter() {
+            Self::draw(batch)?
         }
 
         //Clear queue
-        self.drawcalls.clear();
+        self.batches.clear();
 
         //Swap buffers
         self.window.gl_swap_window();
@@ -273,59 +268,51 @@ impl<'a> GraphicsManager<'a> {
             Some(camera) => camera.matrix() * transform.matrix(),
         };
 
-        self.drawcalls.insert(DrawCall {
+        self.batches.insert(&DrawCall {
+            program: self.program,
             mesh: self.quad,
             texture: sprite.texture(),
-            program: self.program,
             tex_position: sprite.gl_position(),
             tex_size: sprite.gl_size(),
             matrix,
         })
     }
 
-    //TODO: Instantiation?
-    ///Draw a specific drawcall from the queue.
-    fn draw(drawcall: &DrawCall, last_program: &mut Option<Program>, last_mesh: &mut Option<Mesh>, last_texture: &mut Option<Texture>)
-        -> Result<(), DrawingError> {
+    ///Draw a batch.
+    fn draw(batch: &Batch) -> Result<(), DrawingError> {
         //Check that mesh is valid
-        drawcall.mesh.check()?;
+        batch.mesh().check()?;
 
         //Use program
-        if last_program.is_none() || drawcall.program != last_program.unwrap() {
-            drawcall.program.set_used();
-            *last_program = Some(drawcall.program);
-        }
+        batch.program().set_used();
 
         //Set transform matrix
-        drawcall.program.set_mat4("transform", &drawcall.matrix);
+        batch.program().set_mat4_arr("transforms", batch.matrices());
 
         //Set texture coordinates
-        drawcall.program.set_vec2("SourcePosition", &drawcall.tex_position);
-        drawcall.program.set_vec2("SourceSize", &drawcall.tex_size);
+        batch.program().set_vec2_arr("SourcePositions", batch.tex_positions());
+        batch.program().set_vec2_arr("SourceSizes", batch.tex_sizes());
 
-        if last_texture.is_none() || drawcall.texture != last_texture.unwrap() {
-            unsafe {
-                //Bind texture
-                gl::BindTexture(gl::TEXTURE_2D, drawcall.texture.id());
-            }
-            *last_texture = Some(drawcall.texture);
-        }
 
-        if last_mesh.is_none() || drawcall.mesh != last_mesh.unwrap() {
-            unsafe {
-                //Bind mesh
-                gl::BindVertexArray(drawcall.mesh.vao());
-                gl::BindBuffer(gl::ELEMENT_ARRAY_BUFFER, drawcall.mesh.ebo());
-            }
-            *last_mesh = Some(drawcall.mesh);
-        }
-
+        //Bind texture
         unsafe {
-            gl::DrawElements(
+            gl::BindTexture(gl::TEXTURE_2D, batch.texture().id());
+        }
+
+        //Bind mesh
+        unsafe {
+            gl::BindVertexArray(batch.mesh().vao());
+            gl::BindBuffer(gl::ELEMENT_ARRAY_BUFFER, batch.mesh().ebo());
+        }
+
+        //Draw batch
+        unsafe {
+            gl::DrawElementsInstanced(
                 gl::TRIANGLES, //Draw mode
-                drawcall.mesh.indices_count() as i32, //Number of indices
-                gl::UNSIGNED_INT,
+                batch.mesh().indices_count() as i32, //Number of indices
+                gl::UNSIGNED_INT, //Type of indices
                 0 as *const gl::types::GLvoid, //Starting index
+                batch.obj_count() as gl::types::GLint//Number of objects in batch
             );
         }
 

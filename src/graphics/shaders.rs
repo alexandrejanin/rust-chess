@@ -62,20 +62,27 @@ impl Program {
 
 
     ///Attempts to set uniform mat4. Returns success value.
-    pub fn set_mat4(&self, name: &str, mat4: &Matrix4f) -> bool {
+    pub fn set_mat4(&self, name: &str, mat4: &Matrix4f) -> bool { self.set_mat4_arr(name, std::slice::from_ref(mat4)) }
+
+    ///Attempts to set uniform mat4. Returns success value.
+    pub fn set_mat4_arr(&self, name: &str, mat4s: &[Matrix4f]) -> bool {
         let loc = self.get_uniform_location(name);
         if loc == -1 { return false }
 
-        unsafe { gl::UniformMatrix4fv(loc, 1, gl::FALSE, mat4.as_ptr()); }
+        unsafe { gl::UniformMatrix4fv(loc, mat4s.len() as gl::types::GLint, gl::FALSE, mat4s[0].as_ptr()); }
 
         true
     }
 
-    pub fn set_vec2(&self, name: &str, vec2: &Vector2f) -> bool {
+    ///Attempts to set uniform vec2. Returns false if the uniform was not found.
+    pub fn set_vec2(&self, name: &str, vec2: &Vector2f) -> bool { self.set_vec2_arr(name, std::slice::from_ref(vec2)) }
+
+    ///Attempts to set uniform vec2. Returns false if the uniform was not found.
+    pub fn set_vec2_arr(&self, name: &str, vec2s: &[Vector2f]) -> bool {
         let loc = self.get_uniform_location(name);
         if loc == -1 { return false }
 
-        unsafe { gl::Uniform2fv(loc, 1, vec2.as_ptr()); }
+        unsafe { gl::Uniform2fv(loc, vec2s.len() as gl::types::GLint, vec2s[0].as_ptr()); }
 
         true
     }
@@ -83,24 +90,8 @@ impl Program {
     ///Returns uniform location in program from uniform name.
     fn get_uniform_location(&self, name: &str) -> gl::types::GLint {
         let uniform_name = CString::new(name).unwrap();
-        unsafe {
-            return gl::GetUniformLocation(self.id, uniform_name.as_ptr())
-        }
-        /*
-        let loc = match self.uniform_locs.get(&(id, name.to_string())) {
-            Some(loc) => return *loc,
-            None => {
-                let uniform_name = CString::new(name).unwrap();
-                unsafe {
-                    gl::GetUniformLocation(id, uniform_name.as_ptr())
-                }
-            },
-        };
 
-        self.uniform_locs.insert((id, name.to_string()), loc);
-
-        loc
-        */
+        unsafe { gl::GetUniformLocation(self.id, uniform_name.as_ptr()) }
     }
 
 

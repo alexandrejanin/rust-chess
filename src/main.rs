@@ -1,6 +1,6 @@
+extern crate cgmath;
 // Load extern crates
 extern crate floating_duration;
-extern crate cgmath;
 extern crate gl;
 extern crate image;
 extern crate rand;
@@ -10,7 +10,6 @@ extern crate sdl2;
 extern crate serde;
 
 use floating_duration::TimeAsFloat;
-
 use graphics::{
     camera::Camera,
     manager::GraphicsManager,
@@ -18,7 +17,7 @@ use graphics::{
 };
 use maths::{Point3f, Vector2i, Vector2u, Vector3f};
 use std::path::Path;
-use std::time::{Duration, SystemTime};
+use std::time::SystemTime;
 use transform::Transform;
 
 
@@ -69,20 +68,36 @@ fn main() {
     //Create sprite sheet
     let terrain_sheet = sprites::SpriteSheet::new(terrain_texture, Vector2u::new(16, 16));
 
-    //Create sprites
+    //Orbiting sprite
     let mut sprite = sprites::Sprite::new(terrain_sheet, Vector2i::new(3, 0));
-    let mut sprite2 = sprites::Sprite::new(terrain_sheet, Vector2i::new(0, 0));
-
-    //Create transforms
     let mut transform = Transform::new();
-    let mut transform2 = Transform::new();
+
+    //Static sprite
+    let sprite2 = sprites::Sprite::new(terrain_sheet, Vector2i::new(0, 0));
+    let transform2 = Transform::new();
+
+
+    //UI
+    let ui_camera = Camera::from_height(
+        Point3f::new(0.5, 0.5, 10.0), Vector3f::new(0.0, 0.0, -1.0),
+        false,
+        0.1, 100.0,
+        1.0, graphics_manager.window_size()
+    );
+    let ui_sprite = sprites::Sprite::new(terrain_sheet, Vector2i::new(5, 5));
+    let ui_transform = Transform {
+        position: Point3f::new(0.5, 0.5, 0.0),
+        scale: Vector3f::new(0.1, 0.1, 1.0),
+        rotation: Vector3f::new(0.0, 0.0, 0.0),
+    };
+
 
     //Create camera
-    let mut camera = Camera::from_width(
+    let mut camera = Camera::from_height(
         Point3f::new(-5.0, 0.0, 10.0), Vector3f::new(0.5, 0.0, -1.0),
         true,
         0.1, 100.0,
-        60.0, graphics_manager.window_size()
+        36.0, graphics_manager.window_size()
     );
     let mut cam_angle = 0.0;
 
@@ -124,8 +139,8 @@ fn main() {
         if input_manager.get_key_pressed(sdl2::keyboard::Keycode::Up) { sprite.position.y -= 1 }
         if input_manager.get_key_pressed(sdl2::keyboard::Keycode::Down) { sprite.position.y += 1 }
 
-        if input_manager.get_key_down(sdl2::keyboard::Keycode::A) { cam_angle -= delta_time }
-        if input_manager.get_key_down(sdl2::keyboard::Keycode::D) { cam_angle += delta_time }
+        if input_manager.get_key_down(sdl2::keyboard::Keycode::A) { cam_angle -= 2.0 * delta_time }
+        if input_manager.get_key_down(sdl2::keyboard::Keycode::D) { cam_angle += 2.0 * delta_time }
 
 
         //make sprite orbit vertically around origin
@@ -142,13 +157,18 @@ fn main() {
         graphics_manager.clear();
 
         //Draw
-        graphics_manager.draw_sprite(sprite, transform, Some(&camera));
-        graphics_manager.draw_sprite(sprite2, transform2, Some(&camera));
+        for _ in 0..1000 {
+            graphics_manager.draw_sprite(sprite, transform, Some(&camera));
+            graphics_manager.draw_sprite(sprite2, transform2, Some(&camera));
+            graphics_manager.draw_sprite(ui_sprite, ui_transform, Some(&ui_camera));
+        }
 
         //Render
         graphics_manager.render().expect("ERROR: Rendering failed, exiting.");
 
+        println!("{} FPS", 1.0 / delta_time);
+
         //Limit fps
-        std::thread::sleep(Duration::from_millis(1));
+        //std::thread::sleep(Duration::from_millis(1));
     }
 }
