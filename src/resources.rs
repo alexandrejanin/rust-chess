@@ -29,13 +29,14 @@ impl From<image::ImageError> for ResourceError {
 impl Display for ResourceError {
     fn fmt(&self, f: &mut Formatter) -> fmt::Result {
         match self {
-            ResourceError::ExecutablePathNotFound => write!(f, "Error: Could not locate executable path."),
+            ResourceError::ExecutablePathNotFound => {
+                write!(f, "Error: Could not locate executable path.")
+            }
             ResourceError::Io(error) => write!(f, "{}", error),
             ResourceError::Image(error) => write!(f, "{}", error),
         }
     }
 }
-
 
 ///Loads and manages Resource files.
 pub struct ResourceLoader {
@@ -46,16 +47,20 @@ impl ResourceLoader {
     ///Attempts to create a new ResourceLoader for the current folder.
     pub fn new() -> Result<ResourceLoader, ResourceError> {
         //Get path to executable
-        let executable_name = std::env::current_exe()
-            .map_err(|_| ResourceError::ExecutablePathNotFound)?;
+        let executable_name =
+            std::env::current_exe().map_err(|_| ResourceError::ExecutablePathNotFound)?;
 
         //Get parent dir
-        let executable_dir = executable_name.parent().ok_or(ResourceError::ExecutablePathNotFound)?;
+        let executable_dir = executable_name
+            .parent()
+            .ok_or(ResourceError::ExecutablePathNotFound)?;
 
         //Get resources dir
         let res_dir = executable_dir.join(Path::new("res"));
 
-        Ok(ResourceLoader { res_root: res_dir.into() })
+        Ok(ResourceLoader {
+            res_root: res_dir.into(),
+        })
     }
 
     ///Returns absolute path when provided with a path relative to the "res" directory.

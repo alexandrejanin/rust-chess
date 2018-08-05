@@ -17,7 +17,7 @@ fn main() {
         skip_exist: false,
         buffer_size: 64_000,
         copy_inside: true,
-        depth: 0
+        depth: 0,
     };
 
     //Set copy options for files
@@ -28,7 +28,8 @@ fn main() {
     };
 
     //Remove res directory
-    fs_extra::dir::remove(&executable_path.join("res")).expect("Error: could not remove 'res' directory.");
+    fs_extra::dir::remove(&executable_path.join("res"))
+        .expect("Error: could not remove 'res' directory.");
 
     //Copy res directory
     if let Err(error) = fs_extra::dir::copy(

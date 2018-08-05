@@ -1,7 +1,12 @@
+use super::{
+    mesh::Mesh,
+    shaders::Program,
+    sprites::{DATA_LENGTH, MAX_INSTANCES},
+    Texture,
+};
 use gl;
 use maths::{Matrix4f, Vector4f};
 use std::{mem::size_of, slice::Iter};
-use super::{mesh::Mesh, shaders::Program, sprites::{DATA_LENGTH, MAX_INSTANCES}, Texture};
 
 #[derive(Debug)]
 pub struct DrawCall {
@@ -34,11 +39,19 @@ pub struct Batch {
 }
 
 impl Batch {
-    pub fn program(&self) -> Program { self.program }
-    pub fn mesh(&self) -> Mesh { self.mesh }
-    pub fn texture(&self) -> Texture { self.texture }
+    pub fn program(&self) -> Program {
+        self.program
+    }
+    pub fn mesh(&self) -> Mesh {
+        self.mesh
+    }
+    pub fn texture(&self) -> Texture {
+        self.texture
+    }
 
-    pub fn obj_count(&self) -> usize { self.obj_count }
+    pub fn obj_count(&self) -> usize {
+        self.obj_count
+    }
 
     ///Creates an empty batch from specified drawcall.
     pub fn new(drawcall: &DrawCall) -> Self {
@@ -89,7 +102,7 @@ impl Batch {
                 gl::ARRAY_BUFFER,
                 (size_of::<f32>() * self.obj_count * DATA_LENGTH) as gl::types::GLsizeiptr,
                 self.buffer.as_ptr() as *const gl::types::GLvoid,
-                gl::STREAM_DRAW
+                gl::STREAM_DRAW,
             );
         }
     }
@@ -104,24 +117,26 @@ impl BatchList {
     ///Initializes and empty BatchList.
     pub fn new() -> Self {
         Self {
-            batches: Vec::new()
+            batches: Vec::new(),
         }
     }
 
     ///Initializes and empty BatchList with specified capacity before needing to be resized.
     pub fn with_capacity(capacity: usize) -> Self {
         Self {
-            batches: Vec::with_capacity(capacity)
+            batches: Vec::with_capacity(capacity),
         }
     }
 
-
     pub fn insert(&mut self, drawcall: &DrawCall) {
         for batch in &mut self.batches {
-            if batch.program == drawcall.program && batch.mesh == drawcall.mesh && batch.texture == drawcall.texture {
+            if batch.program == drawcall.program
+                && batch.mesh == drawcall.mesh
+                && batch.texture == drawcall.texture
+            {
                 //Attempts to add drawcall to batch
                 if batch.add(drawcall) {
-                    return
+                    return;
                 }
             }
         }

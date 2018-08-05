@@ -1,3 +1,11 @@
+use super::{
+    batches::{Batch, BatchList, DrawCall},
+    camera::Camera,
+    mesh::{Mesh, MeshBuilder, Vertex},
+    shaders::{self, Program},
+    sprites::Sprite,
+    Texture,
+};
 use config;
 use gl;
 use maths::{Vector2f, Vector2u, Vector3f};
@@ -8,15 +16,7 @@ use std::{
     fmt::{self, Display, Formatter},
     path::{Path, PathBuf},
 };
-use super::{
-    batches::{Batch, BatchList, DrawCall},
-    camera::Camera, mesh::{Mesh, MeshBuilder, Vertex},
-    shaders::{self, Program},
-    sprites::Sprite,
-    Texture,
-};
 use transform::Transform;
-
 
 ///Error related to OpenGL drawing.
 #[derive(Debug)]
@@ -76,12 +76,17 @@ pub struct GraphicsManager<'a> {
     batches: BatchList,
 }
 
-
 impl<'a> GraphicsManager<'a> {
-    pub fn quad(&self) -> &Mesh { &self.quad }
+    pub fn quad(&self) -> &Mesh {
+        &self.quad
+    }
 
     ///Initializes graphics from SDL and Config object
-    pub fn new(resource_loader: &'a ResourceLoader, conf: &'a config::Config, sdl: &'a sdl2::Sdl) -> Result<Self, DrawingError> {
+    pub fn new(
+        resource_loader: &'a ResourceLoader,
+        conf: &'a config::Config,
+        sdl: &'a sdl2::Sdl,
+    ) -> Result<Self, DrawingError> {
         //Initialize VideoSubsystem
         let video = sdl.video().unwrap();
 
@@ -124,21 +129,34 @@ impl<'a> GraphicsManager<'a> {
         }
 
         //Load shaders
-        let program = Program::load_shaders(resource_loader, Path::new("shaders/triangle.vert"), Path::new("shaders/triangle.frag"))?;
+        let program = Program::load_shaders(
+            resource_loader,
+            Path::new("shaders/triangle.vert"),
+            Path::new("shaders/triangle.frag"),
+        )?;
 
         //Build quad mesh
         let quad_builder = MeshBuilder {
             vertices: vec![
-                Vertex { position: Vector3f::new(0.5, 0.5, 0.0), uv: Vector2f::new(1.0, 0.0) },  //Top right,
-                Vertex { position: Vector3f::new(0.5, -0.5, 0.0), uv: Vector2f::new(1.0, 1.0) },  //Bottom right
-                Vertex { position: Vector3f::new(-0.5, -0.5, 0.0), uv: Vector2f::new(0.0, 1.0) },  //Bottom left
-                Vertex { position: Vector3f::new(-0.5, 0.5, 0.0), uv: Vector2f::new(0.0, 0.0) },  //Top left,
+                Vertex {
+                    position: Vector3f::new(0.5, 0.5, 0.0),
+                    uv: Vector2f::new(1.0, 0.0),
+                }, //Top right,
+                Vertex {
+                    position: Vector3f::new(0.5, -0.5, 0.0),
+                    uv: Vector2f::new(1.0, 1.0),
+                }, //Bottom right
+                Vertex {
+                    position: Vector3f::new(-0.5, -0.5, 0.0),
+                    uv: Vector2f::new(0.0, 1.0),
+                }, //Bottom left
+                Vertex {
+                    position: Vector3f::new(-0.5, 0.5, 0.0),
+                    uv: Vector2f::new(0.0, 0.0),
+                }, //Top left,
             ],
 
-            indices: vec![
-                0, 1, 2,
-                0, 2, 3,
-            ],
+            indices: vec![0, 1, 2, 0, 2, 3],
         };
 
         let quad = quad_builder.build();
@@ -162,7 +180,7 @@ impl<'a> GraphicsManager<'a> {
     pub fn get_texture(&mut self, path: &Path) -> Result<Texture, DrawingError> {
         //Return texture id if it's loaded already
         if let Some(texture) = self.textures.get(path) {
-            return Ok(*texture)
+            return Ok(*texture);
         };
 
         //Texture wasn't found, load it
@@ -195,12 +213,28 @@ impl<'a> GraphicsManager<'a> {
             );
 
             //Texture wrapping
-            gl::TexParameteri(gl::TEXTURE_2D, gl::TEXTURE_WRAP_S, gl::REPEAT as gl::types::GLint);
-            gl::TexParameteri(gl::TEXTURE_2D, gl::TEXTURE_WRAP_T, gl::REPEAT as gl::types::GLint);
+            gl::TexParameteri(
+                gl::TEXTURE_2D,
+                gl::TEXTURE_WRAP_S,
+                gl::REPEAT as gl::types::GLint,
+            );
+            gl::TexParameteri(
+                gl::TEXTURE_2D,
+                gl::TEXTURE_WRAP_T,
+                gl::REPEAT as gl::types::GLint,
+            );
 
             //Texture filtering
-            gl::TexParameteri(gl::TEXTURE_2D, gl::TEXTURE_MIN_FILTER, gl::NEAREST_MIPMAP_NEAREST as gl::types::GLint);
-            gl::TexParameteri(gl::TEXTURE_2D, gl::TEXTURE_MAG_FILTER, gl::NEAREST as gl::types::GLint);
+            gl::TexParameteri(
+                gl::TEXTURE_2D,
+                gl::TEXTURE_MIN_FILTER,
+                gl::NEAREST_MIPMAP_NEAREST as gl::types::GLint,
+            );
+            gl::TexParameteri(
+                gl::TEXTURE_2D,
+                gl::TEXTURE_MAG_FILTER,
+                gl::NEAREST as gl::types::GLint,
+            );
 
             //Generate mipmaps
             gl::GenerateMipmap(gl::TEXTURE_2D);
@@ -211,7 +245,7 @@ impl<'a> GraphicsManager<'a> {
 
         let texture = Texture {
             id: texture_id,
-            size: Vector2u::new(width, height)
+            size: Vector2u::new(width, height),
         };
 
         //Save texture so we don't have to load it again
@@ -228,15 +262,9 @@ impl<'a> GraphicsManager<'a> {
     ///Call when the window is resized
     pub fn resize(&mut self, width: i32, height: i32) {
         unsafe {
-            gl::Viewport(
-                0,
-                0,
-                width as gl::types::GLint,
-                height as gl::types::GLint,
-            );
+            gl::Viewport(0, 0, width as gl::types::GLint, height as gl::types::GLint);
         }
     }
-
 
     ///Clears the frame for drawing
     pub fn clear(&self) {
@@ -302,11 +330,11 @@ impl<'a> GraphicsManager<'a> {
         //Draw batch
         unsafe {
             gl::DrawElementsInstanced(
-                gl::TRIANGLES, //Draw mode
-                batch.mesh().indices_count() as i32, //Number of indices
-                gl::UNSIGNED_INT, //Type of indices
-                0 as *const gl::types::GLvoid, //Starting index
-                batch.obj_count() as gl::types::GLint//Number of objects in batch
+                gl::TRIANGLES,                         //Draw mode
+                batch.mesh().indices_count() as i32,   //Number of indices
+                gl::UNSIGNED_INT,                      //Type of indices
+                0 as *const gl::types::GLvoid,         //Starting index
+                batch.obj_count() as gl::types::GLint, //Number of objects in batch
             );
         }
 

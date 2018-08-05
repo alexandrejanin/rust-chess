@@ -1,7 +1,7 @@
+use super::manager::DrawingError;
 use gl;
 use maths::{Vector2f, Vector3f};
 use std;
-use super::manager::DrawingError;
 
 #[repr(C)]
 #[derive(Copy, Clone, Debug)]
@@ -16,19 +16,9 @@ impl Vertex {
 
         unsafe {
             //Position
-            Vertex::attrib_array(
-                stride,
-                0,
-                0,
-                3,
-            );
+            Vertex::attrib_array(stride, 0, 0, 3);
             //Color
-            Vertex::attrib_array(
-                stride,
-                1,
-                std::mem::size_of::<Vector3f>(),
-                2,
-            );
+            Vertex::attrib_array(stride, 1, std::mem::size_of::<Vector3f>(), 2);
         }
     }
 
@@ -37,15 +27,14 @@ impl Vertex {
         gl::EnableVertexAttribArray(location);
         gl::VertexAttribPointer(
             location, //Location
-            length, //Number of components per vertex
+            length,   //Number of components per vertex
             gl::FLOAT,
-            gl::FALSE, //Normalize
-            stride as gl::types::GLint, //Stride
-            offset as *const gl::types::GLvoid //Offset
+            gl::FALSE,                          //Normalize
+            stride as gl::types::GLint,         //Stride
+            offset as *const gl::types::GLvoid, //Offset
         );
     }
 }
-
 
 ///Represents a mesh that is loaded in OpenGL.
 #[derive(Copy, Clone, Debug)]
@@ -58,16 +47,30 @@ pub struct Mesh {
 }
 
 impl Mesh {
-    pub fn vbo(&self) -> gl::types::GLuint { self.vbo }
-    pub fn vao(&self) -> gl::types::GLuint { self.vao }
-    pub fn ebo(&self) -> gl::types::GLuint { self.ebo }
+    pub fn vbo(&self) -> gl::types::GLuint {
+        self.vbo
+    }
+    pub fn vao(&self) -> gl::types::GLuint {
+        self.vao
+    }
+    pub fn ebo(&self) -> gl::types::GLuint {
+        self.ebo
+    }
 
-    pub fn vertex_count(&self) -> usize { self.vertex_count }
-    pub fn indices_count(&self) -> usize { self.indices_count }
+    pub fn vertex_count(&self) -> usize {
+        self.vertex_count
+    }
+    pub fn indices_count(&self) -> usize {
+        self.indices_count
+    }
 
     pub fn check(&self) -> Result<(), DrawingError> {
-        if self.ebo == 0 { return Err(DrawingError::MeshEBONotInitialized) }
-        if self.vao == 0 { return Err(DrawingError::MeshVAONotInitialized) }
+        if self.ebo == 0 {
+            return Err(DrawingError::MeshEBONotInitialized);
+        }
+        if self.vao == 0 {
+            return Err(DrawingError::MeshVAONotInitialized);
+        }
 
         Ok(())
     }
@@ -98,7 +101,6 @@ impl Ord for Mesh {
     }
 }
 
-
 #[derive(Debug)]
 pub struct MeshBuilder {
     pub vertices: Vec<Vertex>,
@@ -108,7 +110,10 @@ pub struct MeshBuilder {
 impl MeshBuilder {
     ///Initializes an empty MeshBuilder.
     pub fn new() -> MeshBuilder {
-        MeshBuilder { vertices: Vec::new(), indices: Vec::new() }
+        MeshBuilder {
+            vertices: Vec::new(),
+            indices: Vec::new(),
+        }
     }
 
     ///Builds a mesh from current vertices and indices.
@@ -139,7 +144,8 @@ impl MeshBuilder {
             gl::BindBuffer(gl::ELEMENT_ARRAY_BUFFER, ebo);
             gl::BufferData(
                 gl::ELEMENT_ARRAY_BUFFER,
-                (self.indices.len() * std::mem::size_of::<gl::types::GLuint>()) as gl::types::GLsizeiptr, //Data length
+                (self.indices.len() * std::mem::size_of::<gl::types::GLuint>())
+                    as gl::types::GLsizeiptr, //Data length
                 self.indices.as_ptr() as *const gl::types::GLvoid, //Data location
                 gl::STATIC_DRAW,
             );

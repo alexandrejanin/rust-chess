@@ -1,8 +1,4 @@
-use cgmath::{
-    self,
-    Ortho,
-    PerspectiveFov,
-};
+use cgmath::{self, Ortho, PerspectiveFov};
 use maths::{Matrix4f, Point3f, Vector2f, Vector2u, Vector3f};
 
 //Orthographic camera
@@ -25,7 +21,15 @@ pub struct Camera {
 }
 
 impl Camera {
-    pub fn from_width(position: Point3f, direction: Vector3f, perspective: bool, near: f32, far: f32, width: f32, screen_size: Vector2u) -> Self {
+    pub fn from_width(
+        position: Point3f,
+        direction: Vector3f,
+        perspective: bool,
+        near: f32,
+        far: f32,
+        width: f32,
+        screen_size: Vector2u,
+    ) -> Self {
         let ratio = screen_size.y as f32 / screen_size.x as f32;
         let height = ratio * width;
 
@@ -35,11 +39,19 @@ impl Camera {
             near,
             far,
             size: Vector2f::new(width, height),
-            perspective
+            perspective,
         }
     }
 
-    pub fn from_height(position: Point3f, direction: Vector3f, perspective: bool, near: f32, far: f32, height: f32, screen_size: Vector2u) -> Self {
+    pub fn from_height(
+        position: Point3f,
+        direction: Vector3f,
+        perspective: bool,
+        near: f32,
+        far: f32,
+        height: f32,
+        screen_size: Vector2u,
+    ) -> Self {
         let ratio = screen_size.x as f32 / screen_size.y as f32;
         let width = ratio * height;
 
@@ -49,7 +61,7 @@ impl Camera {
             near,
             far,
             size: Vector2f::new(width, height),
-            perspective
+            perspective,
         }
     }
 
@@ -77,15 +89,11 @@ impl Camera {
                 top: self.size.y / 2.0,
                 near: self.near,
                 far: self.far,
-            }.into()
+            }.into(),
         }
     }
 
     fn view_matrix(&self) -> Matrix4f {
-        Matrix4f::look_at_dir(
-            self.position,
-            self.direction,
-            Vector3f::new(0.0, 1.0, 0.0),
-        )
+        Matrix4f::look_at_dir(self.position, self.direction, Vector3f::new(0.0, 1.0, 0.0))
     }
 }
