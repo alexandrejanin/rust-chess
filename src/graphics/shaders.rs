@@ -1,3 +1,4 @@
+use super::ProgramID;
 use cgmath::{Array, Matrix};
 use gl;
 use maths::{Matrix4f, Vector2f, Vector4f};
@@ -8,7 +9,6 @@ use std::{
     fmt::{self, Display, Formatter},
     path::Path,
 };
-use super::ProgramID;
 
 ///Error related to shaders.
 #[derive(Debug)]
@@ -23,11 +23,15 @@ pub enum ShaderError {
 }
 
 impl From<resources::ResourceError> for ShaderError {
-    fn from(error: resources::ResourceError) -> Self { ShaderError::ResourceError(error) }
+    fn from(error: resources::ResourceError) -> Self {
+        ShaderError::ResourceError(error)
+    }
 }
 
 impl From<ffi::NulError> for ShaderError {
-    fn from(error: ffi::NulError) -> Self { ShaderError::NulError(error) }
+    fn from(error: ffi::NulError) -> Self {
+        ShaderError::NulError(error)
+    }
 }
 
 impl Display for ShaderError {
@@ -36,12 +40,15 @@ impl Display for ShaderError {
         match self {
             ShaderError::NulError(error) => write!(f, "{}", error),
             ShaderError::ResourceError(error) => write!(f, "{}", error),
-            ShaderError::ShaderCompilationFailed(message) => write!(f, "Shader could not compile: {}", message),
-            ShaderError::ProgramLinkingFailed(message) => write!(f, "Program could not link: {}", message),
+            ShaderError::ShaderCompilationFailed(message) => {
+                write!(f, "Shader could not compile: {}", message)
+            }
+            ShaderError::ProgramLinkingFailed(message) => {
+                write!(f, "Program could not link: {}", message)
+            }
         }
     }
 }
-
 
 ///Represents an OpenGL Shader Program.
 #[derive(Copy, Clone, Debug, PartialEq, Eq, PartialOrd, Ord)]
@@ -60,42 +67,70 @@ impl Program {
         }
     }
 
-
-    pub fn set_mat4(&self, name: &str, mat4: &Matrix4f) -> bool { self.set_mat4_arr(name, std::slice::from_ref(mat4)) }
+    pub fn set_mat4(&self, name: &str, mat4: &Matrix4f) -> bool {
+        self.set_mat4_arr(name, std::slice::from_ref(mat4))
+    }
 
     pub fn set_mat4_arr(&self, name: &str, mat4s: &[Matrix4f]) -> bool {
-        if mat4s.is_empty() { return false }
+        if mat4s.is_empty() {
+            return false;
+        }
 
         let loc = self.get_uniform_location(name);
-        if loc == -1 { return false }
+        if loc == -1 {
+            return false;
+        }
 
-        unsafe { gl::UniformMatrix4fv(loc, mat4s.len() as gl::types::GLint, gl::FALSE, mat4s[0].as_ptr()); }
+        unsafe {
+            gl::UniformMatrix4fv(
+                loc,
+                mat4s.len() as gl::types::GLint,
+                gl::FALSE,
+                mat4s[0].as_ptr(),
+            );
+        }
 
         true
     }
 
-    pub fn set_vec2(&self, name: &str, vec2: &Vector2f) -> bool { self.set_vec2_arr(name, std::slice::from_ref(vec2)) }
+    pub fn set_vec2(&self, name: &str, vec2: &Vector2f) -> bool {
+        self.set_vec2_arr(name, std::slice::from_ref(vec2))
+    }
 
     pub fn set_vec2_arr(&self, name: &str, vec2s: &[Vector2f]) -> bool {
-        if vec2s.is_empty() { return false }
+        if vec2s.is_empty() {
+            return false;
+        }
 
         let loc = self.get_uniform_location(name);
-        if loc == -1 { return false }
+        if loc == -1 {
+            return false;
+        }
 
-        unsafe { gl::Uniform2fv(loc, vec2s.len() as gl::types::GLint, vec2s[0].as_ptr()); }
+        unsafe {
+            gl::Uniform2fv(loc, vec2s.len() as gl::types::GLint, vec2s[0].as_ptr());
+        }
 
         true
     }
 
-    pub fn set_vec4(&self, name: &str, vec4: &Vector4f) -> bool { self.set_vec4_arr(name, std::slice::from_ref(vec4)) }
+    pub fn set_vec4(&self, name: &str, vec4: &Vector4f) -> bool {
+        self.set_vec4_arr(name, std::slice::from_ref(vec4))
+    }
 
     pub fn set_vec4_arr(&self, name: &str, vec4s: &[Vector4f]) -> bool {
-        if vec4s.is_empty() { return false }
+        if vec4s.is_empty() {
+            return false;
+        }
 
         let loc = self.get_uniform_location(name);
-        if loc == -1 { return false }
+        if loc == -1 {
+            return false;
+        }
 
-        unsafe { gl::Uniform4fv(loc, vec4s.len() as gl::types::GLint, vec4s[0].as_ptr()); }
+        unsafe {
+            gl::Uniform4fv(loc, vec4s.len() as gl::types::GLint, vec4s[0].as_ptr());
+        }
 
         true
     }
@@ -107,9 +142,12 @@ impl Program {
         unsafe { gl::GetUniformLocation(self.id, uniform_name.as_ptr()) }
     }
 
-
     ///Create Program from vertex and fragment shader paths.
-    pub fn load_shaders(resource_loader: &ResourceLoader, v_path: &Path, f_path: &Path) -> Result<Program, ShaderError> {
+    pub fn load_shaders(
+        resource_loader: &ResourceLoader,
+        v_path: &Path,
+        f_path: &Path,
+    ) -> Result<Program, ShaderError> {
         //Create shaders and program
         let v_shader = Shader::from_file(resource_loader, gl::VERTEX_SHADER, v_path)?;
 
@@ -157,7 +195,7 @@ impl Program {
             }
 
             return Err(ShaderError::ProgramLinkingFailed(
-                error.to_string_lossy().into_owned()
+                error.to_string_lossy().into_owned(),
             ));
         }
 
@@ -171,7 +209,6 @@ impl Program {
         Ok(Program { id: program_id })
     }
 }
-
 
 ///Represents an OpenGL Shader
 #[derive(Debug, PartialEq, Eq, PartialOrd, Ord, Hash)]
@@ -195,7 +232,11 @@ impl Shader {
 
     ///Creates shader from source file.
     ///shader_type: usually gl::VERTEX_SHADER or gl::FRAGMENT_SHADER
-    pub fn from_file(resource_loader: &ResourceLoader, shader_type: gl::types::GLuint, path: &Path) -> Result<Shader, ShaderError> {
+    pub fn from_file(
+        resource_loader: &ResourceLoader,
+        shader_type: gl::types::GLuint,
+        path: &Path,
+    ) -> Result<Shader, ShaderError> {
         let text = CString::new(resource_loader.load_string(path)?)?;
 
         Shader::from_source(shader_type, &text)

@@ -47,10 +47,22 @@ impl Transform {
     ///Creates a matrix that applies selected transforms to a vector.
     pub fn matrix(&self) -> Matrix4f {
         Matrix4f::new(
-            self.scale.x, 0., 0., 0.,
-            0., self.scale.y, 0., 0.,
-            0., 0., self.scale.z, 0.,
-            self.position.x, self.position.y, self.position.z, 1.,
+            self.scale.x,
+            0.,
+            0.,
+            0.,
+            0.,
+            self.scale.y,
+            0.,
+            0.,
+            0.,
+            0.,
+            self.scale.z,
+            0.,
+            self.position.x,
+            self.position.y,
+            self.position.z,
+            1.,
         )
     }
 }

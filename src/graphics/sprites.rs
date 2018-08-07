@@ -1,7 +1,7 @@
+use super::Texture;
 use gl;
 use maths::{Vector2f, Vector2i, Vector2u, Vector4f};
 use std::mem::size_of;
-use super::Texture;
 
 //Max amount of instances in a batch
 pub const MAX_INSTANCES: usize = 1000;
@@ -41,11 +41,17 @@ impl SpriteSheet {
         }
     }
 
-    pub fn sprite_size(&self) -> Vector2u { self.sprite_size }
+    pub fn sprite_size(&self) -> Vector2u {
+        self.sprite_size
+    }
 
-    pub fn sprite_width(&self) -> u32 { self.sprite_size.x }
+    pub fn sprite_width(&self) -> u32 {
+        self.sprite_size.x
+    }
 
-    pub fn sprite_height(&self) -> u32 { self.sprite_size.y }
+    pub fn sprite_height(&self) -> u32 {
+        self.sprite_size.y
+    }
 
     pub fn gl_position(&self, position: Vector2i) -> Vector4f {
         Vector4f::new(
@@ -55,7 +61,6 @@ impl SpriteSheet {
             self.gl_size.y,
         )
     }
-
 
     ///Creates and returns an empty VBO than can fit 'floats' floats.
     fn empty_vbo(floats: usize) -> gl::types::GLuint {
@@ -70,7 +75,7 @@ impl SpriteSheet {
                 gl::ARRAY_BUFFER,
                 (floats * size_of::<f32>()) as gl::types::GLsizeiptr,
                 0 as *const gl::types::GLvoid,
-                gl::STREAM_DRAW
+                gl::STREAM_DRAW,
             );
 
             //Unbind
@@ -81,9 +86,12 @@ impl SpriteSheet {
     }
 
     fn add_instanced_attribute(
-        vao: gl::types::GLuint, vbo: gl::types::GLuint,
-        location: gl::types::GLuint, size: gl::types::GLint,
-        stride: gl::types::GLsizei, offset: usize
+        vao: gl::types::GLuint,
+        vbo: gl::types::GLuint,
+        location: gl::types::GLuint,
+        size: gl::types::GLint,
+        stride: gl::types::GLsizei,
+        offset: usize,
     ) {
         unsafe {
             //Bind and setup location
@@ -91,10 +99,12 @@ impl SpriteSheet {
             gl::BindVertexArray(vao);
             gl::EnableVertexAttribArray(location);
             gl::VertexAttribPointer(
-                location, size,
-                gl::FLOAT, gl::FALSE,
+                location,
+                size,
+                gl::FLOAT,
+                gl::FALSE,
                 stride * size_of::<f32>() as i32,
-                (offset * size_of::<f32>()) as *const gl::types::GLvoid
+                (offset * size_of::<f32>()) as *const gl::types::GLvoid,
             );
             gl::VertexAttribDivisor(location, 1);
 
@@ -115,15 +125,18 @@ pub struct Sprite {
 impl Sprite {
     ///Create a new sprite from a sprite sheet and a position
     pub fn new(sheet: SpriteSheet, position: Vector2i) -> Sprite {
-        Sprite {
-            sheet,
-            position,
-        }
+        Sprite { sheet, position }
     }
 
-    pub fn texture(&self) -> Texture { self.sheet.texture }
+    pub fn texture(&self) -> Texture {
+        self.sheet.texture
+    }
 
-    pub fn vbo(&self) -> gl::types::GLuint { self.sheet.vbo }
+    pub fn vbo(&self) -> gl::types::GLuint {
+        self.sheet.vbo
+    }
 
-    pub fn gl_position(&self) -> Vector4f { self.sheet.gl_position(self.position) }
+    pub fn gl_position(&self) -> Vector4f {
+        self.sheet.gl_position(self.position)
+    }
 }
