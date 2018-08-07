@@ -156,9 +156,8 @@ fn main() {
         //Clear
         graphics_manager.clear();
 
-
         //Draw
-        for _ in 0..333 {
+        for _ in 0..3333 {
             graphics_manager.draw_sprite(sprite, transform, Some(&camera));
             graphics_manager.draw_sprite(sprite2, transform2, Some(&camera));
             graphics_manager.draw_sprite(ui_sprite, ui_transform, Some(&ui_camera));

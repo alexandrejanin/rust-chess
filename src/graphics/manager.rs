@@ -239,11 +239,14 @@ impl<'a> GraphicsManager<'a> {
 
 
     ///Clears the frame for drawing
-    pub fn clear(&self) {
+    pub fn clear(&mut self) {
         //Set and clear view
         unsafe {
             gl::Clear(gl::COLOR_BUFFER_BIT | gl::DEPTH_BUFFER_BIT);
         }
+
+        //Clear queue
+        self.batches.clear();
     }
 
     ///Renders the current frame
