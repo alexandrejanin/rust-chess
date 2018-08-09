@@ -1,11 +1,3 @@
-use super::{
-    batches::{Batch, BatchList, DrawCall},
-    camera::Camera,
-    mesh::{Mesh, MeshBuilder, Vertex},
-    shaders::{self, Program},
-    sprites::Sprite,
-    Texture,
-};
 use config;
 use gl;
 use maths::{Vector2f, Vector2u, Vector3f};
@@ -15,6 +7,14 @@ use std::{
     collections::HashMap,
     fmt::{self, Display, Formatter},
     path::{Path, PathBuf},
+};
+use super::{
+    batches::{Batch, BatchList, DrawCall},
+    camera::Camera,
+    mesh::{Mesh, MeshBuilder, Vertex},
+    shaders::{self, Program},
+    sprites::Sprite,
+    Texture,
 };
 use transform::Transform;
 
@@ -110,9 +110,10 @@ impl<'a> GraphicsManager<'a> {
         gl::load_with(|s| video.gl_get_proc_address(s) as *const gl::types::GLvoid);
 
         //Enable/disable vsync
-        video.gl_set_swap_interval(match conf.display.vsync {
-            true => sdl2::video::SwapInterval::VSync,
-            false => sdl2::video::SwapInterval::Immediate,
+        video.gl_set_swap_interval(if conf.display.vsync {
+            sdl2::video::SwapInterval::VSync
+        } else {
+            sdl2::video::SwapInterval::Immediate
         });
 
         unsafe {
@@ -294,19 +295,14 @@ impl<'a> GraphicsManager<'a> {
     }
 
     ///Add sprite to batch list.
-    pub fn draw_sprite(&mut self, sprite: Sprite, transform: Transform, camera: Option<&Camera>) {
-        let matrix = match camera {
-            None => transform.matrix(),
-            Some(camera) => camera.matrix() * transform.matrix(),
-        };
-
+    pub fn draw_sprite(&mut self, sprite: Sprite, transform: Transform, camera: &Camera) {
         self.batches.insert(&DrawCall {
             program: self.program,
             mesh: self.quad,
             texture: sprite.texture(),
             vbo: sprite.vbo(),
             tex_position: sprite.gl_position(),
-            matrix,
+            matrix: camera.matrix() * transform.matrix(),
         })
     }
 

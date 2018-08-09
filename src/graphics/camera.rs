@@ -46,9 +46,9 @@ impl Camera {
     pub fn from_height(
         position: Point3f,
         direction: Vector3f,
-        perspective: bool,
         near: f32,
         far: f32,
+        perspective: bool,
         height: f32,
         screen_size: Vector2u,
     ) -> Self {

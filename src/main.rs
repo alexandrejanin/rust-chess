@@ -56,60 +56,49 @@ fn main() {
     //Initialize input
     let mut input_manager = input::InputManager::new();
 
-    //Create texture
-    let terrain_path: &Path = Path::new("terrain.png");
-    let terrain_texture = graphics_manager.get_texture(terrain_path).expect(&format!(
-        "ERROR: Could not load texture from '{:?}'",
-        terrain_path
-    ));
+
+    //Create camera
+    let camera = Camera::from_height(
+        Point3f::new(4.0, 4.0, 1.0),
+        Vector3f::new(0.0, 0.0, -1.0),
+        0.1,
+        10.0,
+        false,
+        8.0,
+        graphics_manager.window_size(),
+    );
+
+
+    let tiles_texture = graphics_manager
+        .get_texture(Path::new("sprites/tiles.png"))
+        .unwrap();
+    let tiles_sheet = sprites::SpriteSheet::new(
+        graphics_manager.quad().vao(),
+        tiles_texture,
+        Vector2u::new(16, 16),
+    );
+
+    let tile_sprite = sprites::Sprite::new(tiles_sheet, Vector2i::new(0, 0));
+
+    //Load texture
+    let pieces_path: &Path = Path::new("sprites/pieces.png");
+    let pieces_texture = graphics_manager.get_texture(pieces_path).unwrap();
 
     //Create sprite sheet
-    let terrain_sheet = sprites::SpriteSheet::new(
+    let pieces_sheet = sprites::SpriteSheet::new(
         graphics_manager.quad().vao(),
-        terrain_texture,
+        pieces_texture,
         Vector2u::new(16, 16),
     );
 
     //Orbiting sprite
-    let mut sprite = sprites::Sprite::new(terrain_sheet, Vector2i::new(3, 0));
+    let mut sprite = sprites::Sprite::new(pieces_sheet, Vector2i::new(3, 0));
     let mut transform = Transform::new();
-
-    //Static sprite
-    let sprite2 = sprites::Sprite::new(terrain_sheet, Vector2i::new(0, 0));
-    let transform2 = Transform::new();
-
-    //UI
-    let ui_camera = Camera::from_height(
-        Point3f::new(0.5, 0.5, 10.0),
-        Vector3f::new(0.0, 0.0, -1.0),
-        false,
-        0.1,
-        100.0,
-        1.0,
-        graphics_manager.window_size(),
-    );
-    let ui_sprite = sprites::Sprite::new(terrain_sheet, Vector2i::new(5, 5));
-    let ui_transform = Transform {
-        position: Point3f::new(0.5, 0.5, 0.0),
-        scale: Vector3f::new(0.1, 0.1, 1.0),
-        rotation: Vector3f::new(0.0, 0.0, 0.0),
-    };
-
-    //Create camera
-    let mut camera = Camera::from_height(
-        Point3f::new(-5.0, 0.0, 10.0),
-        Vector3f::new(0.5, 0.0, -1.0),
-        true,
-        0.1,
-        100.0,
-        36.0,
-        graphics_manager.window_size(),
-    );
-    let mut cam_angle = 0.0;
 
     println!(
         "Startup took {} ms.",
-        (SystemTime::now().duration_since(start_time))
+        SystemTime::now()
+            .duration_since(start_time)
             .unwrap()
             .subsec_millis()
     );
@@ -120,7 +109,7 @@ fn main() {
         let now = SystemTime::now();
 
         //Total elapsed time
-        let elapsed_seconds = now.duration_since(start_time).unwrap().as_fractional_secs();
+        let elapsed_seconds = now.duration_since(start_time).unwrap().as_fractional_secs() as f32;
 
         //Delta time
         let delta_time = now.duration_since(last_time).unwrap().as_fractional_secs();
@@ -157,32 +146,23 @@ fn main() {
             sprite.position.y += 1
         }
 
-        if input_manager.get_key_down(sdl2::keyboard::Keycode::A) {
-            cam_angle -= 2.0 * delta_time
-        }
-        if input_manager.get_key_down(sdl2::keyboard::Keycode::D) {
-            cam_angle += 2.0 * delta_time
-        }
-
         //make sprite orbit vertically around origin
-        transform.position.y = elapsed_seconds.cos() as f32;
-        transform.position.x = elapsed_seconds.sin() as f32;
-
-        //make camera orbit around origin
-        camera.position.z = 10.0 * cam_angle.cos() as f32;
-        camera.position.x = 10.0 * cam_angle.sin() as f32;
-
-        camera.look_at(Point3f::new(0.0, 1.0, 0.0));
+        transform.position.y = 0.5 + elapsed_seconds.cos() / 2.0;
+        transform.position.x = 0.5 + elapsed_seconds.sin() / 2.0;
 
         //Clear
         graphics_manager.clear();
 
-        //Draw
-        for _ in 0..3333 {
-            graphics_manager.draw_sprite(sprite, transform, Some(&camera));
-            graphics_manager.draw_sprite(sprite2, transform2, Some(&camera));
-            graphics_manager.draw_sprite(ui_sprite, ui_transform, Some(&ui_camera));
+        //draw board
+        for x in 0..8 {
+            for y in 0..8 {
+                let tile_transform = Transform::from_position(Point3f::new(x as f32 + 0.5, y as f32 + 0.5, -1.0));
+                graphics_manager.draw_sprite(tile_sprite, tile_transform, &camera);
+            }
         }
+
+        //draw pieces
+        graphics_manager.draw_sprite(sprite, transform, &camera);
 
         //Render
         graphics_manager
