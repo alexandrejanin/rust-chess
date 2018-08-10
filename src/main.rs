@@ -111,16 +111,16 @@ fn main() {
         //Update input manager
         input_manager.update(&events);
 
-        if input_manager.get_key_pressed(sdl2::keyboard::Keycode::Left) {
+        if input_manager.key_pressed(sdl2::keyboard::Keycode::Left) {
             sprite.position.x -= 1
         }
-        if input_manager.get_key_pressed(sdl2::keyboard::Keycode::Right) {
+        if input_manager.key_pressed(sdl2::keyboard::Keycode::Right) {
             sprite.position.x += 1
         }
-        if input_manager.get_key_pressed(sdl2::keyboard::Keycode::Up) {
+        if input_manager.key_pressed(sdl2::keyboard::Keycode::Up) {
             sprite.position.y -= 1
         }
-        if input_manager.get_key_pressed(sdl2::keyboard::Keycode::Down) {
+        if input_manager.key_pressed(sdl2::keyboard::Keycode::Down) {
             sprite.position.y += 1
         }
 
@@ -145,6 +145,8 @@ fn main() {
 
         //Render
         graphics_manager.render().expect("ERROR: Rendering failed, exiting.");
+
+        println!("{:?}", input_manager.mouse_position());
 
         //Limit fps
         //std::thread::sleep(Duration::from_millis(1));
