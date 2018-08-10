@@ -1,7 +1,13 @@
-use super::manager::DrawingError;
 use gl;
 use maths::{Vector2f, Vector3f};
-use std;
+use std::{self, mem};
+use super::manager::DrawingError;
+
+//Max amount of instances in a batch
+pub const MAX_BATCH_SIZE: usize = 1000;
+
+//Size of 1 object in the VBO, in floats. 16: matrix, 4: tex coordinates
+pub const BATCH_INSTANCE_SIZE: usize = 20;
 
 #[repr(C)]
 #[derive(Copy, Clone, Debug)]
@@ -42,6 +48,7 @@ pub struct Mesh {
     vbo: gl::types::GLuint,
     vao: gl::types::GLuint,
     ebo: gl::types::GLuint,
+    batch_vbo: gl::types::GLuint,
     vertex_count: usize,
     indices_count: usize,
 }
@@ -55,6 +62,9 @@ impl Mesh {
     }
     pub fn ebo(&self) -> gl::types::GLuint {
         self.ebo
+    }
+    pub fn batch_vbo(&self) -> gl::types::GLuint {
+        self.batch_vbo
     }
 
     pub fn vertex_count(&self) -> usize {
@@ -154,6 +164,14 @@ impl MeshBuilder {
         //Fill VAO
         Vertex::attrib_arrays();
 
+        //Create batch VBO
+        let batch_vbo = Self::empty_vbo(MAX_BATCH_SIZE);
+        Self::add_instanced_attribute(vao, batch_vbo, 2, 4, BATCH_INSTANCE_SIZE as i32, 0); //texture coordinates
+        Self::add_instanced_attribute(vao, batch_vbo, 3, 4, BATCH_INSTANCE_SIZE as i32, 4); //1st column
+        Self::add_instanced_attribute(vao, batch_vbo, 4, 4, BATCH_INSTANCE_SIZE as i32, 8); //2nd column
+        Self::add_instanced_attribute(vao, batch_vbo, 5, 4, BATCH_INSTANCE_SIZE as i32, 12); //3rd column
+        Self::add_instanced_attribute(vao, batch_vbo, 6, 4, BATCH_INSTANCE_SIZE as i32, 16); //4th column
+
         //Unbind everything
         unsafe {
             gl::BindBuffer(gl::ARRAY_BUFFER, 0);
@@ -166,8 +184,61 @@ impl MeshBuilder {
             vbo,
             vao,
             ebo,
+            batch_vbo,
             vertex_count: self.vertices.len(),
             indices_count: self.indices.len(),
+        }
+    }
+
+    ///Creates and returns an empty VBO than can fit 'floats' floats.
+    fn empty_vbo(floats: usize) -> gl::types::GLuint {
+        let mut vbo = 0;
+        unsafe {
+            //Create VBO
+            gl::GenBuffers(1, &mut vbo);
+
+            //Bind and allocate VBO
+            gl::BindBuffer(gl::ARRAY_BUFFER, vbo);
+            gl::BufferData(
+                gl::ARRAY_BUFFER,
+                (floats * mem::size_of::<f32>()) as gl::types::GLsizeiptr,
+                0 as *const gl::types::GLvoid,
+                gl::STREAM_DRAW,
+            );
+
+            //Unbind
+            gl::BindBuffer(gl::ARRAY_BUFFER, 0);
+        }
+
+        vbo
+    }
+
+    fn add_instanced_attribute(
+        vao: gl::types::GLuint,
+        vbo: gl::types::GLuint,
+        location: gl::types::GLuint,
+        size: gl::types::GLint,
+        stride: gl::types::GLsizei,
+        offset: usize,
+    ) {
+        unsafe {
+            //Bind and setup location
+            gl::BindBuffer(gl::ARRAY_BUFFER, vbo);
+            gl::BindVertexArray(vao);
+            gl::EnableVertexAttribArray(location);
+            gl::VertexAttribPointer(
+                location,
+                size,
+                gl::FLOAT,
+                gl::FALSE,
+                stride * mem::size_of::<f32>() as i32,
+                (offset * mem::size_of::<f32>()) as *const gl::types::GLvoid,
+            );
+            gl::VertexAttribDivisor(location, 1);
+
+            //Unbind
+            gl::BindBuffer(gl::ARRAY_BUFFER, 0);
+            gl::BindVertexArray(0);
         }
     }
 }

@@ -1,19 +1,18 @@
-use super::{
-    mesh::Mesh,
-    shaders::Program,
-    sprites::{DATA_LENGTH, MAX_INSTANCES},
-    Texture,
-};
 use gl;
 use maths::{Matrix4f, Vector4f};
 use std::{mem::size_of, slice::Iter};
+use super::{
+    mesh::{BATCH_INSTANCE_SIZE, MAX_BATCH_SIZE, Mesh},
+    shaders::Program,
+    Texture,
+};
 
 #[derive(Debug)]
 pub struct DrawCall {
     pub program: Program,
     pub mesh: Mesh,
     pub texture: Texture,
-    pub vbo: gl::types::GLuint,
+    pub batch_vbo: gl::types::GLuint,
     pub tex_position: Vector4f,
     pub matrix: Matrix4f,
 }
@@ -28,11 +27,11 @@ pub struct Batch {
     texture: Texture,
 
     ///VBO containing transform matrices and texture info for each object
-    vbo: gl::types::GLuint,
+    batch_vbo: gl::types::GLuint,
 
-    //TODO: replace with Vec
+    //TODO: replace with Vec?
     ///Stores the objects' info before it is passed to the VBO
-    buffer: [f32; DATA_LENGTH * MAX_INSTANCES],
+    buffer: [f32; BATCH_INSTANCE_SIZE * MAX_BATCH_SIZE],
 
     ///Current amount of objects in the batch
     obj_count: usize,
@@ -59,8 +58,8 @@ impl Batch {
             program: drawcall.program,
             mesh: drawcall.mesh,
             texture: drawcall.texture,
-            vbo: drawcall.vbo,
-            buffer: [0.0; DATA_LENGTH * MAX_INSTANCES],
+            batch_vbo: drawcall.batch_vbo,
+            buffer: [0.0; BATCH_INSTANCE_SIZE * MAX_BATCH_SIZE],
             obj_count: 0,
         };
 
@@ -74,11 +73,11 @@ impl Batch {
         //TODO: check that batch and drawcall match?
 
         //Check if batch is full
-        if self.obj_count >= MAX_INSTANCES {
+        if self.obj_count >= MAX_BATCH_SIZE {
             return false;
         }
 
-        let start_index = self.obj_count * DATA_LENGTH;
+        let start_index = self.obj_count * BATCH_INSTANCE_SIZE;
 
         //Load tex position in buffer
         for i in 0..4 {
@@ -97,10 +96,10 @@ impl Batch {
 
     pub fn buffer_data(&self) {
         unsafe {
-            gl::BindBuffer(gl::ARRAY_BUFFER, self.vbo);
+            gl::BindBuffer(gl::ARRAY_BUFFER, self.batch_vbo);
             gl::BufferData(
                 gl::ARRAY_BUFFER,
-                (size_of::<f32>() * self.obj_count * DATA_LENGTH) as gl::types::GLsizeiptr,
+                (size_of::<f32>() * self.obj_count * BATCH_INSTANCE_SIZE) as gl::types::GLsizeiptr,
                 self.buffer.as_ptr() as *const gl::types::GLvoid,
                 gl::STREAM_DRAW,
             );
@@ -133,12 +132,12 @@ impl BatchList {
             if batch.program == drawcall.program
                 && batch.mesh == drawcall.mesh
                 && batch.texture == drawcall.texture
-            {
-                //Attempts to add drawcall to batch
-                if batch.add(drawcall) {
-                    return;
+                {
+                    //Attempts to add drawcall to batch
+                    if batch.add(drawcall) {
+                        return;
+                    }
                 }
-            }
         }
 
         //Could not find suitable batch, create a new one

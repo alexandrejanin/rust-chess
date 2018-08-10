@@ -300,7 +300,7 @@ impl<'a> GraphicsManager<'a> {
             program: self.program,
             mesh: self.quad,
             texture: sprite.texture(),
-            vbo: sprite.vbo(),
+            batch_vbo: self.quad.batch_vbo(),
             tex_position: sprite.gl_position(),
             matrix: camera.matrix() * transform.matrix(),
         })

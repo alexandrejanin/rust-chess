@@ -31,15 +31,13 @@ fn main() {
     let mut last_time = start_time;
 
     //Initialize ResourceLoader
-    let resource_loader =
-        resources::ResourceLoader::new().expect("ERROR: Could not initialize resource loader");
+    let resource_loader = resources::ResourceLoader::new()
+        .expect("ERROR: Could not initialize resource loader");
 
     //Load Configuration from file
     let conf_path: &Path = Path::new("config.ron");
-    let conf = config::Config::from_file(&resource_loader, conf_path).expect(&format!(
-        "ERROR: Could not load config file from '{:?}'",
-        conf_path
-    ));
+    let conf = config::Config::from_file(&resource_loader, conf_path)
+        .expect(&format!("ERROR: Could not load config file from '{:?}'", conf_path));
 
     //Initialize SDL
     let sdl = sdl2::init().expect("ERROR: Could not initialize SDL");
@@ -49,9 +47,7 @@ fn main() {
         .expect("ERROR: Could not initialize graphics manager");
 
     //Initialize events
-    let mut events = sdl
-        .event_pump()
-        .expect("ERROR: Could not initialize Event Pump");
+    let mut events = sdl.event_pump().expect("ERROR: Could not initialize Event Pump");
 
     //Initialize input
     let mut input_manager = input::InputManager::new();
@@ -69,39 +65,21 @@ fn main() {
     );
 
 
-    let tiles_texture = graphics_manager
-        .get_texture(Path::new("sprites/tiles.png"))
-        .unwrap();
-    let tiles_sheet = sprites::SpriteSheet::new(
-        graphics_manager.quad().vao(),
-        tiles_texture,
-        Vector2u::new(16, 16),
-    );
+    //Load tiles texture
+    let tiles_texture = graphics_manager.get_texture("sprites/tiles.png".as_ref()).unwrap();
+    let tiles_sheet = sprites::SpriteSheet::new(tiles_texture, Vector2u::new(16, 16), );
+    let mut tile_sprite = sprites::Sprite::new(tiles_sheet, Vector2i::new(0, 0));
 
-    let tile_sprite = sprites::Sprite::new(tiles_sheet, Vector2i::new(0, 0));
-
-    //Load texture
-    let pieces_path: &Path = Path::new("sprites/pieces.png");
-    let pieces_texture = graphics_manager.get_texture(pieces_path).unwrap();
-
-    //Create sprite sheet
-    let pieces_sheet = sprites::SpriteSheet::new(
-        graphics_manager.quad().vao(),
-        pieces_texture,
-        Vector2u::new(16, 16),
-    );
-
-    //Orbiting sprite
+    //Load pieces texture
+    let pieces_texture = graphics_manager.get_texture("sprites/pieces.png".as_ref()).unwrap();
+    let pieces_sheet = sprites::SpriteSheet::new(pieces_texture, Vector2u::new(16, 16), );
     let mut sprite = sprites::Sprite::new(pieces_sheet, Vector2i::new(3, 0));
+
     let mut transform = Transform::new();
 
-    println!(
-        "Startup took {} ms.",
-        SystemTime::now()
-            .duration_since(start_time)
-            .unwrap()
-            .subsec_millis()
-    );
+
+    println!("Startup took {:?}", SystemTime::now().duration_since(start_time).unwrap());
+
 
     //Main loop
     'main: loop {
@@ -112,7 +90,7 @@ fn main() {
         let elapsed_seconds = now.duration_since(start_time).unwrap().as_fractional_secs() as f32;
 
         //Delta time
-        let delta_time = now.duration_since(last_time).unwrap().as_fractional_secs();
+        let delta_time = now.duration_since(last_time).unwrap().as_fractional_secs() as f32;
         last_time = now;
 
         //Handle events
@@ -157,6 +135,7 @@ fn main() {
         for x in 0..8 {
             for y in 0..8 {
                 let tile_transform = Transform::from_position(Point3f::new(x as f32 + 0.5, y as f32 + 0.5, -1.0));
+                tile_sprite.position.y = y + x;
                 graphics_manager.draw_sprite(tile_sprite, tile_transform, &camera);
             }
         }
@@ -165,9 +144,7 @@ fn main() {
         graphics_manager.draw_sprite(sprite, transform, &camera);
 
         //Render
-        graphics_manager
-            .render()
-            .expect("ERROR: Rendering failed, exiting.");
+        graphics_manager.render().expect("ERROR: Rendering failed, exiting.");
 
         //Limit fps
         //std::thread::sleep(Duration::from_millis(1));
