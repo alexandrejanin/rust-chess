@@ -1,14 +1,38 @@
 extern crate sdl2;
 
 use maths::Vector2i;
-use sdl2::keyboard::Keycode;
-use std::collections::HashSet;
+use sdl2::{keyboard::Keycode, mouse::MouseButton};
+use std::collections::{HashMap, HashSet};
+
+///Represents the current state of a keyboard key.
+#[derive(Copy, Clone, PartialEq, Eq)]
+struct KeyState {
+    ///Is the key currently held down?
+    down: bool,
+    ///Did the key's state change this frame?
+    changed: bool,
+}
+
+impl KeyState {
+    fn down(&self) -> bool {
+        self.down
+    }
+    fn pressed(&self) -> bool {
+        self.down && self.changed
+    }
+    fn released(&self) -> bool {
+        !self.down && self.changed
+    }
+
+    fn update(&mut self, pressed: bool) {
+        self.changed = pressed != self.down;
+        self.down = pressed;
+    }
+}
 
 pub struct InputManager {
     //Keyboard state
-    held_keys: HashSet<Keycode>,
-    pressed_keys: HashSet<Keycode>,
-    released_keys: HashSet<Keycode>,
+    key_state: HashMap<Keycode, KeyState>,
     //Mouse state
     mouse_position: Vector2i,
 }
@@ -16,9 +40,7 @@ pub struct InputManager {
 impl InputManager {
     pub fn new() -> InputManager {
         InputManager {
-            held_keys: HashSet::new(),
-            pressed_keys: HashSet::new(),
-            released_keys: HashSet::new(),
+            key_state: HashMap::new(),
             mouse_position: Vector2i::new(0, 0),
         }
     }
@@ -26,15 +48,35 @@ impl InputManager {
     ///Update InputManager with new events
     pub fn update(&mut self, events: &sdl2::EventPump) {
         //Update keyboard state
-        let new_held_keys: HashSet<Keycode> = events
+        let new_key_state: Vec<(Keycode, bool)> = events
             .keyboard_state()
-            .pressed_scancodes()
-            .filter_map(Keycode::from_scancode)
+            .scancodes()
+            //Convert from scancode to keycode
+            .filter_map(|(scancode, pressed)|
+                if let Some(keycode) = Keycode::from_scancode(scancode) {
+                    Some((keycode, pressed))
+                } else {
+                    None
+                }
+            )
             .collect();
 
-        self.pressed_keys = &new_held_keys - &self.held_keys;
-        self.released_keys = &self.held_keys - &new_held_keys;
-        self.held_keys = new_held_keys;
+        for (keycode, pressed) in new_key_state.iter() {
+            if !self.key_state.contains_key(keycode) {
+                self.key_state.insert(
+                    *keycode,
+                    KeyState {
+                        down: *pressed,
+                        changed: false,
+                    },
+                );
+            }
+
+            self.key_state
+                .get_mut(keycode)
+                .expect(&format!("Keycode not found: {:?}", keycode))
+                .update(*pressed);
+        }
 
         //Update mouse
         let mouse_state = events.mouse_state();
@@ -43,20 +85,21 @@ impl InputManager {
 
     ///Key is currently held down
     pub fn key_down(&self, keycode: Keycode) -> bool {
-        self.held_keys.contains(&keycode)
+        self.key_state[&keycode].down()
     }
 
     ///Key was pressed this frame
     pub fn key_pressed(&self, keycode: Keycode) -> bool {
-        self.pressed_keys.contains(&keycode)
+        self.key_state[&keycode].pressed()
     }
 
     ///Key was released this frame
     pub fn key_released(&self, keycode: Keycode) -> bool {
-        self.released_keys.contains(&keycode)
+        self.key_state[&keycode].released()
     }
 
-
     ///Mouse position in pixels, relative to the top left corner.
-    pub fn mouse_position(&self) -> Vector2i { self.mouse_position }
+    pub fn mouse_position(&self) -> Vector2i {
+        self.mouse_position
+    }
 }

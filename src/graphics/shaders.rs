@@ -20,6 +20,8 @@ pub enum ShaderError {
     ShaderCompilationFailed(String),
     ///OpenGL Program could not link. Contains OpenGL Error log.
     ProgramLinkingFailed(String),
+    ///Uniform was not found in the current program. Contains uniform name.
+    InvalidUniform(String),
 }
 
 impl From<resources::ResourceError> for ShaderError {
@@ -46,6 +48,7 @@ impl Display for ShaderError {
             ShaderError::ProgramLinkingFailed(message) => {
                 write!(f, "Program could not link: {}", message)
             }
+            ShaderError::InvalidUniform(uniform) => write!(f, "Invalid uniform: {}", uniform),
         }
     }
 }
@@ -67,19 +70,12 @@ impl Program {
         }
     }
 
-    pub fn set_mat4(&self, name: &str, mat4: &Matrix4f) -> bool {
+    pub fn set_mat4(&self, name: &str, mat4: &Matrix4f) -> Result<(), ShaderError> {
         self.set_mat4_arr(name, std::slice::from_ref(mat4))
     }
 
-    pub fn set_mat4_arr(&self, name: &str, mat4s: &[Matrix4f]) -> bool {
-        if mat4s.is_empty() {
-            return false;
-        }
-
-        let loc = self.get_uniform_location(name);
-        if loc == -1 {
-            return false;
-        }
+    pub fn set_mat4_arr(&self, name: &str, mat4s: &[Matrix4f]) -> Result<(), ShaderError> {
+        let loc = self.get_uniform_location(name)?;
 
         unsafe {
             gl::UniformMatrix4fv(
@@ -90,56 +86,48 @@ impl Program {
             );
         }
 
-        true
+        Ok(())
     }
 
-    pub fn set_vec2(&self, name: &str, vec2: &Vector2f) -> bool {
+    pub fn set_vec2(&self, name: &str, vec2: &Vector2f) -> Result<(), ShaderError> {
         self.set_vec2_arr(name, std::slice::from_ref(vec2))
     }
 
-    pub fn set_vec2_arr(&self, name: &str, vec2s: &[Vector2f]) -> bool {
-        if vec2s.is_empty() {
-            return false;
-        }
-
-        let loc = self.get_uniform_location(name);
-        if loc == -1 {
-            return false;
-        }
+    pub fn set_vec2_arr(&self, name: &str, vec2s: &[Vector2f]) -> Result<(), ShaderError> {
+        let loc = self.get_uniform_location(name)?;
 
         unsafe {
             gl::Uniform2fv(loc, vec2s.len() as gl::types::GLint, vec2s[0].as_ptr());
         }
 
-        true
+        Ok(())
     }
 
-    pub fn set_vec4(&self, name: &str, vec4: &Vector4f) -> bool {
+    pub fn set_vec4(&self, name: &str, vec4: &Vector4f) -> Result<(), ShaderError> {
         self.set_vec4_arr(name, std::slice::from_ref(vec4))
     }
 
-    pub fn set_vec4_arr(&self, name: &str, vec4s: &[Vector4f]) -> bool {
-        if vec4s.is_empty() {
-            return false;
-        }
-
-        let loc = self.get_uniform_location(name);
-        if loc == -1 {
-            return false;
-        }
+    pub fn set_vec4_arr(&self, name: &str, vec4s: &[Vector4f]) -> Result<(), ShaderError> {
+        let loc = self.get_uniform_location(name)?;
 
         unsafe {
             gl::Uniform4fv(loc, vec4s.len() as gl::types::GLint, vec4s[0].as_ptr());
         }
 
-        true
+        Ok(())
     }
 
     ///Returns uniform location in program from uniform name.
-    fn get_uniform_location(&self, name: &str) -> gl::types::GLint {
-        let uniform_name = CString::new(name).unwrap();
+    fn get_uniform_location(&self, name: &str) -> Result<gl::types::GLint, ShaderError> {
+        let uniform_name = CString::new(name)?;
 
-        unsafe { gl::GetUniformLocation(self.id, uniform_name.as_ptr()) }
+        let loc = unsafe { gl::GetUniformLocation(self.id, uniform_name.as_ptr()) };
+
+        return if loc < 0 {
+            Err(ShaderError::InvalidUniform(name.into()))
+        } else {
+            Ok(loc)
+        };
     }
 
     ///Create Program from vertex and fragment shader paths.

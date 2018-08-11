@@ -1,11 +1,11 @@
-use gl;
-use maths::{Matrix4f, Vector4f};
-use std::{mem::size_of, slice::Iter};
 use super::{
-    mesh::{BATCH_INSTANCE_SIZE, MAX_BATCH_SIZE, Mesh},
+    mesh::{Mesh, BATCH_INSTANCE_SIZE, MAX_BATCH_SIZE},
     shaders::Program,
     Texture,
 };
+use gl;
+use maths::{Matrix4f, Vector4f};
+use std::{mem::size_of, slice::Iter};
 
 #[derive(Debug)]
 pub struct DrawCall {
@@ -132,12 +132,12 @@ impl BatchList {
             if batch.program == drawcall.program
                 && batch.mesh == drawcall.mesh
                 && batch.texture == drawcall.texture
-                {
-                    //Attempts to add drawcall to batch
-                    if batch.add(drawcall) {
-                        return;
-                    }
+            {
+                //Attempts to add drawcall to batch
+                if batch.add(drawcall) {
+                    return;
                 }
+            }
         }
 
         //Could not find suitable batch, create a new one

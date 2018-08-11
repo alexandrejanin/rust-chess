@@ -1,3 +1,11 @@
+use super::{
+    batches::{Batch, BatchList, DrawCall},
+    camera::Camera,
+    mesh::{Mesh, MeshBuilder, Vertex},
+    shaders::{self, Program},
+    sprites::Sprite,
+    Texture,
+};
 use config;
 use gl;
 use maths::{Vector2f, Vector2u, Vector3f};
@@ -8,19 +16,16 @@ use std::{
     fmt::{self, Display, Formatter},
     path::{Path, PathBuf},
 };
-use super::{
-    batches::{Batch, BatchList, DrawCall},
-    camera::Camera,
-    mesh::{Mesh, MeshBuilder, Vertex},
-    shaders::{self, Program},
-    sprites::Sprite,
-    Texture,
-};
 use transform::Transform;
 
 ///Error related to OpenGL drawing.
 #[derive(Debug)]
 pub enum DrawingError {
+    ///Error related to SDL.
+    SdlError(String),
+    ///Error related to OpenGL.
+    GlError(String),
+    ///Error related to reources handling.
     ResourceError(resources::ResourceError),
     ///Error related to OpenGL shaders.
     ShaderError(shaders::ShaderError),
@@ -28,6 +33,8 @@ pub enum DrawingError {
     MeshEBONotInitialized,
     ///Tried drawing a mesh that had no EBO set.
     MeshVAONotInitialized,
+    ///Error related to window building.
+    WindowBuildError(sdl2::video::WindowBuildError),
 }
 
 impl From<resources::ResourceError> for DrawingError {
@@ -42,14 +49,22 @@ impl From<shaders::ShaderError> for DrawingError {
     }
 }
 
+impl From<sdl2::video::WindowBuildError> for DrawingError {
+    fn from(error: sdl2::video::WindowBuildError) -> Self {
+        DrawingError::WindowBuildError(error)
+    }
+}
+
 impl Display for DrawingError {
     fn fmt(&self, f: &mut Formatter) -> fmt::Result {
-        write!(f, "Drawing failed: ")?;
         match self {
+            DrawingError::SdlError(string) => write!(f, "{}", string),
+            DrawingError::GlError(string) => write!(f, "{}", string),
             DrawingError::ResourceError(error) => write!(f, "{}", error),
             DrawingError::ShaderError(error) => write!(f, "{}", error),
             DrawingError::MeshEBONotInitialized => write!(f, "Mesh EBO not initialized"),
             DrawingError::MeshVAONotInitialized => write!(f, "Mesh VAO not initialized"),
+            DrawingError::WindowBuildError(error) => write!(f, "{}", error),
         }
     }
 }
@@ -62,16 +77,12 @@ pub struct GraphicsManager<'a> {
     video: sdl2::VideoSubsystem,
     window: sdl2::video::Window,
     gl_context: sdl2::video::GLContext,
-
     ///Basic shader program
     program: Program,
-
     ///Basic mesh used to draw sprites.
     quad: Mesh,
-
     ///Holds all textures that are loaded already.
     textures: HashMap<PathBuf, Texture>,
-
     ///All draw calls to be rendered this frame.
     batches: BatchList,
 }
@@ -88,7 +99,7 @@ impl<'a> GraphicsManager<'a> {
         sdl: &'a sdl2::Sdl,
     ) -> Result<Self, DrawingError> {
         //Initialize VideoSubsystem
-        let video = sdl.video().unwrap();
+        let video = sdl.video().map_err(|msg| DrawingError::SdlError(msg))?;
 
         //Set OpenGL parameters
         {
@@ -102,11 +113,12 @@ impl<'a> GraphicsManager<'a> {
             .window("RustChess", conf.display.width, conf.display.height)
             .opengl()
             .resizable()
-            .build()
-            .unwrap();
+            .build()?;
 
         //Initialize OpenGL
-        let gl_context = window.gl_create_context().unwrap();
+        let gl_context = window
+            .gl_create_context()
+            .map_err(|msg| DrawingError::GlError(msg))?;
         gl::load_with(|s| video.gl_get_proc_address(s) as *const gl::types::GLvoid);
 
         //Enable/disable vsync
@@ -156,7 +168,6 @@ impl<'a> GraphicsManager<'a> {
                     uv: Vector2f::new(0.0, 0.0),
                 }, //Top left,
             ],
-
             indices: vec![0, 1, 2, 0, 2, 3],
         };
 

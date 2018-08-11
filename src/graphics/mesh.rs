@@ -1,7 +1,7 @@
+use super::manager::DrawingError;
 use gl;
 use maths::{Vector2f, Vector3f};
 use std::{self, mem};
-use super::manager::DrawingError;
 
 //Max amount of instances in a batch
 pub const MAX_BATCH_SIZE: usize = 1000;

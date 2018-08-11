@@ -1,5 +1,5 @@
-use maths::{Vector2f, Vector2i, Vector2u, Vector4f};
 use super::Texture;
+use maths::{Vector2f, Vector2i, Vector2u, Vector4f};
 
 ///Represents an OpenGL texture sliced into sprites.
 #[derive(Copy, Clone, Debug)]

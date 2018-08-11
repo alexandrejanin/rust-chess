@@ -31,13 +31,15 @@ fn main() {
     let mut last_time = start_time;
 
     //Initialize ResourceLoader
-    let resource_loader = resources::ResourceLoader::new()
-        .expect("ERROR: Could not initialize resource loader");
+    let resource_loader =
+        resources::ResourceLoader::new().expect("ERROR: Could not initialize resource loader");
 
     //Load Configuration from file
     let conf_path: &Path = Path::new("config.ron");
-    let conf = config::Config::from_file(&resource_loader, conf_path)
-        .expect(&format!("ERROR: Could not load config file from '{:?}'", conf_path));
+    let conf = config::Config::from_file(&resource_loader, conf_path).expect(&format!(
+        "ERROR: Could not load config file from '{:?}'",
+        conf_path
+    ));
 
     //Initialize SDL
     let sdl = sdl2::init().expect("ERROR: Could not initialize SDL");
@@ -47,11 +49,12 @@ fn main() {
         .expect("ERROR: Could not initialize graphics manager");
 
     //Initialize events
-    let mut events = sdl.event_pump().expect("ERROR: Could not initialize Event Pump");
+    let mut events = sdl
+        .event_pump()
+        .expect("ERROR: Could not initialize Event Pump");
 
     //Initialize input
     let mut input_manager = input::InputManager::new();
-
 
     //Create camera
     let camera = Camera::from_height(
@@ -64,22 +67,26 @@ fn main() {
         graphics_manager.window_size(),
     );
 
-
     //Load tiles texture
-    let tiles_texture = graphics_manager.get_texture("sprites/tiles.png".as_ref()).unwrap();
-    let tiles_sheet = sprites::SpriteSheet::new(tiles_texture, Vector2u::new(16, 16), );
+    let tiles_texture = graphics_manager
+        .get_texture("sprites/tiles.png".as_ref())
+        .unwrap();
+    let tiles_sheet = sprites::SpriteSheet::new(tiles_texture, Vector2u::new(16, 16));
     let mut tile_sprite = sprites::Sprite::new(tiles_sheet, Vector2i::new(0, 0));
 
     //Load pieces texture
-    let pieces_texture = graphics_manager.get_texture("sprites/pieces.png".as_ref()).unwrap();
-    let pieces_sheet = sprites::SpriteSheet::new(pieces_texture, Vector2u::new(16, 16), );
+    let pieces_texture = graphics_manager
+        .get_texture("sprites/pieces.png".as_ref())
+        .unwrap();
+    let pieces_sheet = sprites::SpriteSheet::new(pieces_texture, Vector2u::new(16, 16));
     let mut sprite = sprites::Sprite::new(pieces_sheet, Vector2i::new(3, 0));
 
-    let mut transform = Transform::new();
+    let mut transform = Transform::from_position((0.5, 0.5, 0.0).into());
 
-
-    println!("Startup took {:?}", SystemTime::now().duration_since(start_time).unwrap());
-
+    println!(
+        "Startup took {:?}",
+        SystemTime::now().duration_since(start_time).unwrap()
+    );
 
     //Main loop
     'main: loop {
@@ -111,6 +118,7 @@ fn main() {
         //Update input manager
         input_manager.update(&events);
 
+        //Change sprite
         if input_manager.key_pressed(sdl2::keyboard::Keycode::Left) {
             sprite.position.x -= 1
         }
@@ -124,9 +132,19 @@ fn main() {
             sprite.position.y += 1
         }
 
-        //make sprite orbit vertically around origin
-        transform.position.y = 0.5 + elapsed_seconds.cos() / 2.0;
-        transform.position.x = 0.5 + elapsed_seconds.sin() / 2.0;
+        //Move piece around
+        if input_manager.key_pressed(sdl2::keyboard::Keycode::A) {
+            transform.position.x -= 1.0
+        }
+        if input_manager.key_pressed(sdl2::keyboard::Keycode::D) {
+            transform.position.x += 1.0
+        }
+        if input_manager.key_pressed(sdl2::keyboard::Keycode::W) {
+            transform.position.y += 1.0
+        }
+        if input_manager.key_pressed(sdl2::keyboard::Keycode::S) {
+            transform.position.y -= 1.0
+        }
 
         //Clear
         graphics_manager.clear();
@@ -134,7 +152,8 @@ fn main() {
         //draw board
         for x in 0..8 {
             for y in 0..8 {
-                let tile_transform = Transform::from_position(Point3f::new(x as f32 + 0.5, y as f32 + 0.5, -1.0));
+                let tile_transform =
+                    Transform::from_position(Point3f::new(x as f32 + 0.5, y as f32 + 0.5, -1.0));
                 tile_sprite.position.y = y + x;
                 graphics_manager.draw_sprite(tile_sprite, tile_transform, &camera);
             }
@@ -144,9 +163,9 @@ fn main() {
         graphics_manager.draw_sprite(sprite, transform, &camera);
 
         //Render
-        graphics_manager.render().expect("ERROR: Rendering failed, exiting.");
-
-        println!("{:?}", input_manager.mouse_position());
+        graphics_manager
+            .render()
+            .expect("ERROR: Rendering failed, exiting.");
 
         //Limit fps
         //std::thread::sleep(Duration::from_millis(1));
