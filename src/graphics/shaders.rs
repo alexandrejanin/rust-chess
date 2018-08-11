@@ -123,11 +123,11 @@ impl Program {
 
         let loc = unsafe { gl::GetUniformLocation(self.id, uniform_name.as_ptr()) };
 
-        return if loc < 0 {
+        if loc < 0 {
             Err(ShaderError::InvalidUniform(name.into()))
         } else {
             Ok(loc)
-        };
+        }
     }
 
     ///Create Program from vertex and fragment shader paths.

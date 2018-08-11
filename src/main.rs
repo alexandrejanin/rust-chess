@@ -11,7 +11,7 @@ extern crate serde;
 
 use floating_duration::TimeAsFloat;
 use graphics::{camera::Camera, manager::GraphicsManager, sprites};
-use maths::{Point3f, Vector2i, Vector2u, Vector3f};
+use maths::{Deg, Point3f, Vector2i, Vector2u, Vector3f};
 use std::path::Path;
 use std::time::SystemTime;
 use transform::Transform;
@@ -36,10 +36,8 @@ fn main() {
 
     //Load Configuration from file
     let conf_path: &Path = Path::new("config.ron");
-    let conf = config::Config::from_file(&resource_loader, conf_path).expect(&format!(
-        "ERROR: Could not load config file from '{:?}'",
-        conf_path
-    ));
+    let conf = config::Config::from_file(&resource_loader, conf_path)
+        .unwrap_or_else(|_| panic!("ERROR: Could not load config file from '{:?}'", conf_path));
 
     //Initialize SDL
     let sdl = sdl2::init().expect("ERROR: Could not initialize SDL");
@@ -146,14 +144,20 @@ fn main() {
             transform.position.y -= 1.0
         }
 
-        //Clear
-        graphics_manager.clear();
+        transform.rotation.z = 100.0 * elapsed_seconds;
 
         //draw board
         for x in 0..8 {
             for y in 0..8 {
-                let tile_transform =
+                let mut tile_transform =
                     Transform::from_position(Point3f::new(x as f32 + 0.5, y as f32 + 0.5, -1.0));
+
+                tile_transform.rotation.x = x as f32 * 20.0 * elapsed_seconds;
+                tile_transform.rotation.y = y as f32 * 20.0 * elapsed_seconds;
+                tile_transform.rotation.z = (x + y) as f32 * 20.0 * elapsed_seconds;
+
+                tile_transform.scale = Vector3f::new(0.8, 0.8, 0.8);
+
                 tile_sprite.position.y = y + x;
                 graphics_manager.draw_sprite(tile_sprite, tile_transform, &camera);
             }

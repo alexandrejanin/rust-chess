@@ -56,11 +56,9 @@ impl ResourceLoader {
             .ok_or(ResourceError::ExecutablePathNotFound)?;
 
         //Get resources dir
-        let res_dir = executable_dir.join(Path::new("res"));
+        let res_root = executable_dir.join(Path::new("res"));
 
-        Ok(ResourceLoader {
-            res_root: res_dir.into(),
-        })
+        Ok(ResourceLoader { res_root })
     }
 
     ///Returns absolute path when provided with a path relative to the "res" directory.

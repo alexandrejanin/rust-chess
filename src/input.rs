@@ -1,8 +1,6 @@
-extern crate sdl2;
-
 use maths::Vector2i;
-use sdl2::{keyboard::Keycode, mouse::MouseButton};
-use std::collections::{HashMap, HashSet};
+use sdl2::{self, keyboard::Keycode, mouse::MouseButton};
+use std::collections::HashMap;
 
 ///Represents the current state of a keyboard key.
 #[derive(Copy, Clone, PartialEq, Eq)]
@@ -61,7 +59,7 @@ impl InputManager {
             )
             .collect();
 
-        for (keycode, pressed) in new_key_state.iter() {
+        for (keycode, pressed) in &new_key_state {
             if !self.key_state.contains_key(keycode) {
                 self.key_state.insert(
                     *keycode,

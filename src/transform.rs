@@ -1,4 +1,5 @@
-use maths::{Matrix4f, Point3f, Vector3f};
+use cgmath;
+use maths::{Euler, Matrix4f, Point3f, Quaternion, Vector3f};
 
 #[derive(Copy, Clone, Debug, PartialEq)]
 pub struct Transform {
@@ -8,7 +9,7 @@ pub struct Transform {
 }
 
 impl Transform {
-    ///Create a transform with base position, scale, and rotation.
+    ///Create a transform with default position, scale, and rotation.
     pub fn new() -> Self {
         Self {
             position: Point3f::new(0.0, 0.0, 0.0),
@@ -17,7 +18,7 @@ impl Transform {
         }
     }
 
-    ///Create a transform at set position, with base scale and rotation.
+    ///Create a transform at set position, with default scale and rotation.
     pub fn from_position(position: Point3f) -> Self {
         Self {
             position,
@@ -26,7 +27,7 @@ impl Transform {
         }
     }
 
-    ///Create a transform with set scale, with base position and rotation.
+    ///Create a transform with set scale, with default position and rotation.
     pub fn from_scale(scale: Vector3f) -> Self {
         Self {
             position: Point3f::new(0.0, 0.0, 0.0),
@@ -35,7 +36,7 @@ impl Transform {
         }
     }
 
-    ///Create a transform with set rotation, with base position and scale.
+    ///Create a transform with set rotation, with default position and scale.
     pub fn from_rotation(rotation: Vector3f) -> Self {
         Self {
             position: Point3f::new(0.0, 0.0, 0.0),
@@ -46,7 +47,14 @@ impl Transform {
 
     ///Creates a matrix that applies selected transforms to a vector.
     pub fn matrix(&self) -> Matrix4f {
-        Matrix4f::new(
+        let quaternion = Quaternion::from(Euler::new(
+            cgmath::Deg(self.rotation.x),
+            cgmath::Deg(self.rotation.y),
+            cgmath::Deg(self.rotation.z),
+        ));
+
+        let rot = Matrix4f::from(quaternion);
+        let scale = Matrix4f::new(
             self.scale.x,
             0.,
             0.,
@@ -59,10 +67,30 @@ impl Transform {
             0.,
             self.scale.z,
             0.,
+            0.,
+            0.,
+            0.,
+            1.,
+        );
+        let translate = Matrix4f::new(
+            1.,
+            0.,
+            0.,
+            0.,
+            0.,
+            1.,
+            0.,
+            0.,
+            0.,
+            0.,
+            1.,
+            0.,
             self.position.x,
             self.position.y,
             self.position.z,
             1.,
-        )
+        );
+
+        translate * rot * scale
     }
 }

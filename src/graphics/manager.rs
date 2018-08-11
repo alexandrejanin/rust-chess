@@ -99,7 +99,7 @@ impl<'a> GraphicsManager<'a> {
         sdl: &'a sdl2::Sdl,
     ) -> Result<Self, DrawingError> {
         //Initialize VideoSubsystem
-        let video = sdl.video().map_err(|msg| DrawingError::SdlError(msg))?;
+        let video = sdl.video().map_err(DrawingError::SdlError)?;
 
         //Set OpenGL parameters
         {
@@ -116,9 +116,7 @@ impl<'a> GraphicsManager<'a> {
             .build()?;
 
         //Initialize OpenGL
-        let gl_context = window
-            .gl_create_context()
-            .map_err(|msg| DrawingError::GlError(msg))?;
+        let gl_context = window.gl_create_context().map_err(DrawingError::GlError)?;
         gl::load_with(|s| video.gl_get_proc_address(s) as *const gl::types::GLvoid);
 
         //Enable/disable vsync
@@ -278,19 +276,13 @@ impl<'a> GraphicsManager<'a> {
         }
     }
 
-    ///Clears the frame for drawing
-    pub fn clear(&mut self) {
-        //Set and clear view
+    ///Renders the current frame
+    pub fn render(&mut self) -> Result<(), DrawingError> {
+        //Clear render target
         unsafe {
             gl::Clear(gl::COLOR_BUFFER_BIT | gl::DEPTH_BUFFER_BIT);
         }
 
-        //Clear queue
-        self.batches.clear();
-    }
-
-    ///Renders the current frame
-    pub fn render(&mut self) -> Result<(), DrawingError> {
         //Render batches
         for batch in self.batches.iter() {
             self.draw(batch)?

@@ -74,22 +74,22 @@ impl Camera {
     }
 
     fn proj_matrix(&self) -> Matrix4f {
-        match self.perspective {
-            true => PerspectiveFov {
+        if self.perspective {
+            PerspectiveFov {
                 fovy: cgmath::Deg(self.size.y).into(),
                 near: self.near,
                 far: self.far,
                 aspect: self.size.x / self.size.y,
-            }.into(),
-
-            false => Ortho {
+            }.into()
+        } else {
+            Ortho {
                 left: -self.size.x / 2.0,
                 right: self.size.x / 2.0,
                 bottom: -self.size.y / 2.0,
                 top: self.size.y / 2.0,
                 near: self.near,
                 far: self.far,
-            }.into(),
+            }.into()
         }
     }
 

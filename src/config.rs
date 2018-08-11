@@ -1,7 +1,6 @@
+use resources::ResourceLoader;
 use ron::de;
 use std::path::Path;
-
-use resources::ResourceLoader;
 
 #[derive(Debug, Deserialize)]
 pub struct Config {

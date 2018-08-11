@@ -23,9 +23,14 @@ pub type Vector2u = cgmath::Vector2<u32>;
 pub type Vector3u = cgmath::Vector3<u32>;
 
 //Matrix
-
 pub type Matrix4f = cgmath::Matrix4<f32>;
 
-//Quaternion
+//Angles
+pub type Deg = cgmath::Deg<f32>;
+pub type Rad = cgmath::Rad<f32>;
 
+//Euler
+pub type Euler = cgmath::Euler<Deg>;
+
+//Quaternion
 pub type Quaternion = cgmath::Quaternion<f32>;
