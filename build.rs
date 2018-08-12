@@ -1,7 +1,6 @@
 extern crate fs_extra;
 
-use std::env;
-use std::path::PathBuf;
+use std::{env, path::PathBuf};
 
 fn main() {
     let manifest_dir = PathBuf::from(env::var("CARGO_MANIFEST_DIR").unwrap());
@@ -32,20 +31,16 @@ fn main() {
         .expect("Error: could not remove 'res' directory.");
 
     //Copy res directory
-    if let Err(error) = fs_extra::dir::copy(
+    fs_extra::dir::copy(
         &manifest_dir.join("res"),
         &executable_path.join("res"),
         &dir_options,
-    ) {
-        panic!("Error: Could not copy 'res' folder.\n{}", error)
-    }
+    ).unwrap_or_else(|error| panic!("Error: Could not copy 'res' folder.\n{}", error));
 
     //Copy DLL
-    if let Err(error) = fs_extra::file::copy(
-        &manifest_dir.join("bin/SDL2.dll"),
+    fs_extra::file::copy(
+        &manifest_dir.join("SDL2.dll"),
         &executable_path.join("SDL2.dll"),
         &file_options,
-    ) {
-        panic!("Error: Could not copy 'SDL2.dll'.\n{}", error)
-    }
+    ).unwrap_or_else(|error| panic!("Error: Could not copy 'SDL2.dll'.\n{}", error));
 }

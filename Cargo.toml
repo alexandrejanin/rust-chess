@@ -7,14 +7,8 @@ authors = ["Alexandre Janin <alexandrejanin92@gmail.com>"]
 fs_extra = "*"
 
 [dependencies]
+cuivre = { path = "../cuivre" }
+
 floating-duration = "*"
 rand = "*"
-
-sdl2 = "*"
-gl = "*"
-cgmath = "*"
-
-image = "*"
-ron = "*"
 serde = "*"
-

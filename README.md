@@ -1,2 +1,4 @@
 # rust-chess
-Test chess game made using Rust and SDL2
+WIP test chess game made with my engine [cuivre](https://github.com/alexandrejanin/cuivre).
+
+(yeah it doesn't look like chess yet)

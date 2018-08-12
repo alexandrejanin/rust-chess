@@ -1,28 +1,20 @@
-extern crate cgmath;
-// Load extern crates
+extern crate cuivre;
 extern crate floating_duration;
-extern crate gl;
-extern crate image;
 extern crate rand;
-extern crate ron;
-extern crate sdl2;
 #[macro_use]
 extern crate serde;
 
+use cuivre::{
+    graphics::{camera::Camera, manager::GraphicsManager, sprites},
+    input,
+    maths::{Point3f, Vector2i, Vector2u, Vector3f},
+    resources,
+    transform::Transform,
+};
 use floating_duration::TimeAsFloat;
-use graphics::{camera::Camera, manager::GraphicsManager, sprites};
-use maths::{Deg, Point3f, Vector2i, Vector2u, Vector3f};
-use std::path::Path;
-use std::time::SystemTime;
-use transform::Transform;
+use std::{path::Path, time::SystemTime};
 
 mod config;
-mod input;
-mod resources;
-
-mod graphics;
-mod maths;
-mod transform;
 
 // Main
 fn main() {
@@ -31,20 +23,34 @@ fn main() {
     let mut last_time = start_time;
 
     //Initialize ResourceLoader
-    let resource_loader =
-        resources::ResourceLoader::new().expect("ERROR: Could not initialize resource loader");
+    let resource_loader = resources::ResourceLoader::new("res".as_ref())
+        .unwrap_or_else(|error| panic!("ERROR: Could not initialize resource loader.\n{}", error));
 
-    //Load Configuration from file
-    let conf_path: &Path = Path::new("config.ron");
-    let conf = config::Config::from_file(&resource_loader, conf_path)
-        .unwrap_or_else(|_| panic!("ERROR: Could not load config file from '{:?}'", conf_path));
+    //Load configuration from file
+    let conf_path = Path::new("config.ron");
+    let conf = resource_loader
+        .load_object::<config::Config>(conf_path)
+        .unwrap_or_else(|error| {
+            panic!(
+                "ERROR: Could not load config file from {:?}.\n{}",
+                conf_path, error
+            )
+        });
 
     //Initialize SDL
-    let sdl = sdl2::init().expect("ERROR: Could not initialize SDL");
+    let sdl = cuivre::init_sdl().expect("ERROR: Could not initialize SDL");
 
     //Initialize graphics
-    let mut graphics_manager = GraphicsManager::new(&resource_loader, &conf, &sdl)
-        .expect("ERROR: Could not initialize graphics manager");
+    let mut graphics_manager = GraphicsManager::new(
+        &sdl,
+        &resource_loader,
+        "shaders/standard.vert".as_ref(),
+        "shaders/standard.frag".as_ref(),
+        "RustChess",
+        conf.video.width,
+        conf.video.height,
+        conf.video.vsync,
+    ).expect("ERROR: Could not initialize graphics manager");
 
     //Initialize events
     let mut events = sdl
@@ -55,7 +61,7 @@ fn main() {
     let mut input_manager = input::InputManager::new();
 
     //Create camera
-    let camera = Camera::from_height(
+    let mut camera = Camera::from_height(
         Point3f::new(4.0, 4.0, 1.0),
         Vector3f::new(0.0, 0.0, -1.0),
         0.1,
@@ -101,11 +107,11 @@ fn main() {
         //Handle events
         for event in events.poll_iter() {
             match event {
-                sdl2::event::Event::Quit { .. } => break 'main,
-                sdl2::event::Event::Window { win_event, .. } => match win_event {
-                    sdl2::event::WindowEvent::SizeChanged(width, height) => {
+                cuivre::Event::Quit { .. } => break 'main,
+                cuivre::Event::Window { win_event, .. } => match win_event {
+                    cuivre::WindowEvent::SizeChanged(width, height) => {
                         graphics_manager.resize(width, height);
-                        //camera.resize_keep_width((width as u32, height as u32).into())
+                        camera.resize_keep_height(width, height);
                     }
                     _ => {}
                 },
@@ -117,30 +123,30 @@ fn main() {
         input_manager.update(&events);
 
         //Change sprite
-        if input_manager.key_pressed(sdl2::keyboard::Keycode::Left) {
+        if input_manager.key_released(input::Keycode::Left) {
             sprite.position.x -= 1
         }
-        if input_manager.key_pressed(sdl2::keyboard::Keycode::Right) {
+        if input_manager.key_released(input::Keycode::Right) {
             sprite.position.x += 1
         }
-        if input_manager.key_pressed(sdl2::keyboard::Keycode::Up) {
+        if input_manager.key_released(input::Keycode::Up) {
             sprite.position.y -= 1
         }
-        if input_manager.key_pressed(sdl2::keyboard::Keycode::Down) {
+        if input_manager.key_released(input::Keycode::Down) {
             sprite.position.y += 1
         }
 
         //Move piece around
-        if input_manager.key_pressed(sdl2::keyboard::Keycode::A) {
+        if input_manager.key_pressed(input::Keycode::A) {
             transform.position.x -= 1.0
         }
-        if input_manager.key_pressed(sdl2::keyboard::Keycode::D) {
+        if input_manager.key_pressed(input::Keycode::D) {
             transform.position.x += 1.0
         }
-        if input_manager.key_pressed(sdl2::keyboard::Keycode::W) {
+        if input_manager.key_pressed(input::Keycode::W) {
             transform.position.y += 1.0
         }
-        if input_manager.key_pressed(sdl2::keyboard::Keycode::S) {
+        if input_manager.key_pressed(input::Keycode::S) {
             transform.position.y -= 1.0
         }
 
