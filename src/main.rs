@@ -5,37 +5,31 @@ extern crate rand;
 extern crate serde;
 
 use cuivre::{
-    graphics::{camera::Camera, manager::GraphicsManager, sprites},
+    graphics::{Camera, GraphicsManager, Sprite, SpriteSheet},
     input,
-    maths::{Point3f, Vector2i, Vector2u, Vector3f},
+    maths::{Point3f, Vector2u, Vector3f},
     resources,
     transform::Transform,
 };
 use floating_duration::TimeAsFloat;
-use std::{path::Path, time::SystemTime};
+use game::PiecesManager;
+use std::{error, path::Path, time::SystemTime};
 
 mod config;
+mod game;
 
 // Main
-fn main() {
+fn main() -> Result<(), Box<error::Error>> {
     //Initialize time
     let start_time = SystemTime::now();
     let mut last_time = start_time;
 
     //Initialize ResourceLoader
-    let resource_loader = resources::ResourceLoader::new("res".as_ref())
-        .unwrap_or_else(|error| panic!("ERROR: Could not initialize resource loader.\n{}", error));
+    let resource_loader = resources::ResourceLoader::new("res".as_ref())?;
 
     //Load configuration from file
     let conf_path = Path::new("config.ron");
-    let conf = resource_loader
-        .load_object::<config::Config>(conf_path)
-        .unwrap_or_else(|error| {
-            panic!(
-                "ERROR: Could not load config file from {:?}.\n{}",
-                conf_path, error
-            )
-        });
+    let conf = resource_loader.load_object::<config::Config>(conf_path)?;
 
     //Initialize SDL
     let sdl = cuivre::init_sdl().expect("ERROR: Could not initialize SDL");
@@ -50,12 +44,10 @@ fn main() {
         conf.video.width,
         conf.video.height,
         conf.video.vsync,
-    ).expect("ERROR: Could not initialize graphics manager");
+    )?;
 
     //Initialize events
-    let mut events = sdl
-        .event_pump()
-        .expect("ERROR: Could not initialize Event Pump");
+    let mut events = sdl.event_pump()?;
 
     //Initialize input
     let mut input_manager = input::InputManager::new();
@@ -72,24 +64,19 @@ fn main() {
     );
 
     //Load tiles texture
-    let tiles_texture = graphics_manager
-        .get_texture("sprites/tiles.png".as_ref())
-        .unwrap();
-    let tiles_sheet = sprites::SpriteSheet::new(tiles_texture, Vector2u::new(16, 16));
-    let mut tile_sprite = sprites::Sprite::new(tiles_sheet, Vector2i::new(0, 0));
+    let tiles_texture = graphics_manager.get_texture("sprites/tiles.png".as_ref())?;
+    let tiles_sheet = SpriteSheet::new(tiles_texture, Vector2u::new(16, 16));
 
     //Load pieces texture
-    let pieces_texture = graphics_manager
-        .get_texture("sprites/pieces.png".as_ref())
-        .unwrap();
-    let pieces_sheet = sprites::SpriteSheet::new(pieces_texture, Vector2u::new(16, 16));
-    let mut sprite = sprites::Sprite::new(pieces_sheet, Vector2i::new(3, 0));
+    let pieces_texture = graphics_manager.get_texture("sprites/pieces.png".as_ref())?;
+    let pieces_sheet = SpriteSheet::new(pieces_texture, Vector2u::new(16, 16));
 
-    let mut transform = Transform::from_position((0.5, 0.5, 0.0).into());
+    //Create pieces manager
+    let pieces_manager = PiecesManager::new();
 
     println!(
         "Startup took {:?}",
-        SystemTime::now().duration_since(start_time).unwrap()
+        SystemTime::now().duration_since(start_time)?
     );
 
     //Main loop
@@ -98,59 +85,31 @@ fn main() {
         let now = SystemTime::now();
 
         //Total elapsed time
-        let elapsed_seconds = now.duration_since(start_time).unwrap().as_fractional_secs() as f32;
+        let elapsed_seconds = now.duration_since(start_time)?.as_fractional_secs() as f32;
 
         //Delta time
-        let delta_time = now.duration_since(last_time).unwrap().as_fractional_secs() as f32;
+        let delta_time = now.duration_since(last_time)?.as_fractional_secs() as f32;
         last_time = now;
 
         //Handle events
         for event in events.poll_iter() {
             match event {
                 cuivre::Event::Quit { .. } => break 'main,
-                cuivre::Event::Window { win_event, .. } => match win_event {
-                    cuivre::WindowEvent::SizeChanged(width, height) => {
+                cuivre::Event::Window { win_event, .. } => {
+                    if let cuivre::WindowEvent::SizeChanged(width, height) = win_event {
                         graphics_manager.resize(width, height);
                         camera.resize_keep_height(width, height);
                     }
-                    _ => {}
-                },
+                }
                 _ => {}
             }
         }
 
-        //Update input manager
         input_manager.update(&events);
 
-        //Change sprite
-        if input_manager.key_released(input::Keycode::Left) {
-            sprite.position.x -= 1
+        if input_manager.button(input::MouseButton::Left)?.pressed() {
+            println!("Clicked at {:?}", input_manager.mouse_position());
         }
-        if input_manager.key_released(input::Keycode::Right) {
-            sprite.position.x += 1
-        }
-        if input_manager.key_released(input::Keycode::Up) {
-            sprite.position.y -= 1
-        }
-        if input_manager.key_released(input::Keycode::Down) {
-            sprite.position.y += 1
-        }
-
-        //Move piece around
-        if input_manager.key_pressed(input::Keycode::A) {
-            transform.position.x -= 1.0
-        }
-        if input_manager.key_pressed(input::Keycode::D) {
-            transform.position.x += 1.0
-        }
-        if input_manager.key_pressed(input::Keycode::W) {
-            transform.position.y += 1.0
-        }
-        if input_manager.key_pressed(input::Keycode::S) {
-            transform.position.y -= 1.0
-        }
-
-        transform.rotation.z = 100.0 * elapsed_seconds;
 
         //draw board
         for x in 0..8 {
@@ -158,26 +117,23 @@ fn main() {
                 let mut tile_transform =
                     Transform::from_position(Point3f::new(x as f32 + 0.5, y as f32 + 0.5, -1.0));
 
-                tile_transform.rotation.x = x as f32 * 20.0 * elapsed_seconds;
-                tile_transform.rotation.y = y as f32 * 20.0 * elapsed_seconds;
-                tile_transform.rotation.z = (x + y) as f32 * 20.0 * elapsed_seconds;
-
-                tile_transform.scale = Vector3f::new(0.8, 0.8, 0.8);
-
-                tile_sprite.position.y = y + x;
+                let tile_sprite = tiles_sheet.sprite(0, x + y);
                 graphics_manager.draw_sprite(tile_sprite, tile_transform, &camera);
             }
         }
 
         //draw pieces
-        graphics_manager.draw_sprite(sprite, transform, &camera);
-
+        for piece in &pieces_manager.pieces {
+            let piece_sprite = piece.sprite(&pieces_sheet);
+            let transform = piece.transform();
+            graphics_manager.draw_sprite(piece_sprite, transform, &camera);
+        }
         //Render
-        graphics_manager
-            .render()
-            .expect("ERROR: Rendering failed, exiting.");
+        graphics_manager.render()?;
 
         //Limit fps
         //std::thread::sleep(Duration::from_millis(1));
     }
+
+    Ok(())
 }
