@@ -5,7 +5,7 @@ extern crate rand;
 extern crate serde;
 
 use cuivre::{
-    graphics::{Camera, GraphicsManager, Sprite, SpriteSheet},
+    graphics::{Camera, CameraScaleMode, GraphicsManager, Sprite, SpriteSheet},
     input,
     maths::{Point3f, Vector2u, Vector3f},
     resources,
@@ -53,15 +53,15 @@ fn main() -> Result<(), Box<error::Error>> {
     let mut input_manager = input::InputManager::new();
 
     //Create camera
-    let mut camera = Camera::from_height(
-        Point3f::new(4.0, 4.0, 1.0),
-        Vector3f::new(0.0, 0.0, -1.0),
-        0.1,
-        10.0,
-        false,
-        8.0,
-        graphics_manager.window_size(),
-    );
+    let camera = Camera {
+        position: Point3f::new(4.0, 4.0, 1.0),
+        direction: Vector3f::new(0.0, 0.0, -1.0),
+        near: 0.1,
+        far: 10.0,
+        size: 9.0,
+        scale_mode: CameraScaleMode::Min,
+        perspective: false
+    };
 
     //Load tiles texture
     let tiles_texture = graphics_manager.get_texture("sprites/tiles.png".as_ref())?;
@@ -98,7 +98,6 @@ fn main() -> Result<(), Box<error::Error>> {
                 cuivre::Event::Window { win_event, .. } => {
                     if let cuivre::WindowEvent::SizeChanged(width, height) = win_event {
                         graphics_manager.resize(width, height);
-                        camera.resize_keep_height(width, height);
                     }
                 }
                 _ => {}
