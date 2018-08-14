@@ -6,7 +6,7 @@ extern crate serde;
 
 use cuivre::{
     graphics::{Camera, CameraScaleMode, GraphicsManager, Sprite, SpriteSheet},
-    input,
+    input::{InputManager, Keycode, MouseButton},
     maths::{Point3f, Vector2u, Vector3f},
     resources,
     transform::Transform,
@@ -50,7 +50,9 @@ fn main() -> Result<(), Box<error::Error>> {
     let mut events = sdl.event_pump()?;
 
     //Initialize input
-    let mut input_manager = input::InputManager::new();
+    let mut input_manager = InputManager::new();
+
+    input_manager.set_keybind("Spacebar", Keycode::Space);
 
     //Create camera
     let camera = Camera {
@@ -65,11 +67,11 @@ fn main() -> Result<(), Box<error::Error>> {
 
     //Load tiles texture
     let tiles_texture = graphics_manager.get_texture("sprites/tiles.png".as_ref())?;
-    let tiles_sheet = SpriteSheet::new(tiles_texture, Vector2u::new(16, 16));
+    let tiles_sheet = SpriteSheet::new(&tiles_texture, Vector2u::new(16, 16));
 
     //Load pieces texture
     let pieces_texture = graphics_manager.get_texture("sprites/pieces.png".as_ref())?;
-    let pieces_sheet = SpriteSheet::new(pieces_texture, Vector2u::new(16, 16));
+    let pieces_sheet = SpriteSheet::new(&pieces_texture, Vector2u::new(16, 16));
 
     //Create pieces manager
     let pieces_manager = PiecesManager::new();
@@ -106,7 +108,11 @@ fn main() -> Result<(), Box<error::Error>> {
 
         input_manager.update(&events);
 
-        if input_manager.button(input::MouseButton::Left)?.pressed() {
+        if input_manager.keybind("Spacebar")?.pressed() {
+            println!("Spacebar released!");
+        }
+
+        if input_manager.button(MouseButton::Left)?.pressed() {
             println!("Clicked at {:?}", input_manager.mouse_position());
         }
 

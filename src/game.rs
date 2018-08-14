@@ -1,5 +1,5 @@
-use super::{Sprite, SpriteSheet, Transform};
 use cuivre::maths::Point3f;
+use super::{Sprite, SpriteSheet, Transform};
 
 #[derive(Copy, Clone)]
 pub enum Team {
@@ -45,7 +45,7 @@ impl Piece {
         }
     }
 
-    pub fn sprite(&self, sheet: &SpriteSheet) -> Sprite {
+    pub fn sprite<'s>(&self, sheet: &'s SpriteSheet) -> Sprite<'s> {
         let y = match self.team {
             Team::White => 0,
             Team::Black => 1,
