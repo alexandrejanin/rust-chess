@@ -1,19 +1,27 @@
 extern crate cuivre;
 extern crate floating_duration;
 extern crate rand;
+extern crate ron;
 #[macro_use]
 extern crate serde;
 
 use cuivre::{
-    graphics::{Camera, CameraScaleMode, GraphicsManager, Sprite, SpriteSheet},
-    input::{InputManager, Keycode, MouseButton},
-    maths::{Point3f, Vector2u, Vector3f},
-    resources,
+    graphics::{
+        camera::{Camera, CameraScaleMode},
+        GraphicsManager,
+        sprites::{Sprite, SpriteSheet},
+        text::Font,
+        textures::{Texture, TextureOptions},
+        WindowSettings
+    },
+    input::InputManager,
+    maths::{Point3f, Vector3f},
+    resources::ResourceLoader,
     transform::Transform,
 };
 use floating_duration::TimeAsFloat;
 use game::PiecesManager;
-use std::{error, path::Path, time::SystemTime};
+use std::{error, time::SystemTime};
 
 mod config;
 mod game;
@@ -25,26 +33,13 @@ fn main() -> Result<(), Box<error::Error>> {
     let mut last_time = start_time;
 
     //Initialize ResourceLoader
-    let resource_loader = resources::ResourceLoader::new("res".as_ref())?;
+    let resource_loader = ResourceLoader::new("res".as_ref())?;
 
     //Load configuration from file
-    let conf_path = Path::new("config.ron");
-    let conf = resource_loader.load_object::<config::Config>(conf_path)?;
+    let conf = resource_loader.load::<config::Config>("config.ron".as_ref(), ())??;
 
     //Initialize SDL
-    let sdl = cuivre::init_sdl().expect("ERROR: Could not initialize SDL");
-
-    //Initialize graphics
-    let mut graphics_manager = GraphicsManager::new(
-        &sdl,
-        &resource_loader,
-        "shaders/standard.vert".as_ref(),
-        "shaders/standard.frag".as_ref(),
-        "RustChess",
-        conf.video.width,
-        conf.video.height,
-        conf.video.vsync,
-    )?;
+    let sdl = cuivre::init_sdl()?;
 
     //Initialize events
     let mut events = sdl.event_pump()?;
@@ -52,7 +47,29 @@ fn main() -> Result<(), Box<error::Error>> {
     //Initialize input
     let mut input_manager = InputManager::new();
 
-    input_manager.set_keybind("Spacebar", Keycode::Space);
+    //Initialize graphics
+    let mut graphics_manager = GraphicsManager::new(&sdl, WindowSettings {
+        title: "RustChess",
+        width: conf.video.width,
+        height: conf.video.height,
+        vsync: conf.video.vsync
+    })?;
+
+
+    //Get default texture options
+    let texture_options = TextureOptions::default();
+
+    //Load tiles texture
+    let tiles_texture = resource_loader.load::<Texture>("sprites/tiles.png".as_ref(), texture_options)??;
+    let tiles_sheet = SpriteSheet::new(tiles_texture, 16, 16);
+
+    //Load pieces texture
+    let pieces_texture = resource_loader.load::<Texture>("sprites/pieces.png".as_ref(), texture_options)??;
+    let pieces_sheet = SpriteSheet::new(pieces_texture, 16, 16);
+
+    //Load font
+    let roboto = resource_loader.load::<Font>("fonts/Roboto.ttf".as_ref(), ())??;
+    let text_transform = Transform::new();
 
     //Create camera
     let camera = Camera {
@@ -62,16 +79,8 @@ fn main() -> Result<(), Box<error::Error>> {
         far: 10.0,
         size: 9.0,
         scale_mode: CameraScaleMode::Min,
-        perspective: false
+        perspective: false,
     };
-
-    //Load tiles texture
-    let tiles_texture = graphics_manager.get_texture("sprites/tiles.png".as_ref())?;
-    let tiles_sheet = SpriteSheet::new(&tiles_texture, Vector2u::new(16, 16));
-
-    //Load pieces texture
-    let pieces_texture = graphics_manager.get_texture("sprites/pieces.png".as_ref())?;
-    let pieces_sheet = SpriteSheet::new(&pieces_texture, Vector2u::new(16, 16));
 
     //Create pieces manager
     let pieces_manager = PiecesManager::new();
@@ -108,22 +117,14 @@ fn main() -> Result<(), Box<error::Error>> {
 
         input_manager.update(&events);
 
-        if input_manager.keybind("Spacebar")?.pressed() {
-            println!("Spacebar released!");
-        }
-
-        if input_manager.button(MouseButton::Left)?.pressed() {
-            println!("Clicked at {:?}", input_manager.mouse_position());
-        }
-
         //draw board
         for x in 0..8 {
             for y in 0..8 {
                 let mut tile_transform =
                     Transform::from_position(Point3f::new(x as f32 + 0.5, y as f32 + 0.5, -1.0));
 
-                let tile_sprite = tiles_sheet.sprite(0, x + y);
-                graphics_manager.draw_sprite(tile_sprite, tile_transform, &camera);
+                let tile_sprite = tiles_sheet.sprite(0, x + y + 1);
+                graphics_manager.draw_sprite(&tile_sprite, &tile_transform, &camera);
             }
         }
 
@@ -131,8 +132,11 @@ fn main() -> Result<(), Box<error::Error>> {
         for piece in &pieces_manager.pieces {
             let piece_sprite = piece.sprite(&pieces_sheet);
             let transform = piece.transform();
-            graphics_manager.draw_sprite(piece_sprite, transform, &camera);
+            graphics_manager.draw_sprite(&piece_sprite, &transform, &camera);
         }
+
+        //draw text
+        graphics_manager.draw_text("Test!", &roboto, &text_transform, &camera)?;
         //Render
         graphics_manager.render()?;
 

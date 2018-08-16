@@ -1,5 +1,5 @@
-use cuivre::maths::Point3f;
 use super::{Sprite, SpriteSheet, Transform};
+use cuivre::maths::Point3f;
 
 #[derive(Copy, Clone)]
 pub enum Team {

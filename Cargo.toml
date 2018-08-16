@@ -11,4 +11,7 @@ cuivre = { path = "../cuivre" }
 
 floating-duration = "*"
 rand = "*"
+
 serde = "*"
+ron = "*"
+
