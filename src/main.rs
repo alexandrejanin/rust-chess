@@ -11,12 +11,11 @@ use cuivre::{
         GraphicsManager,
         sprites::{Sprite, SpriteSheet},
         text::Font,
-        textures::{Texture, TextureOptions},
-        WindowSettings
+        textures::{Texture, TextureOptions}, WindowSettings,
     },
     input::InputManager,
     maths::{Point3f, Vector3f},
-    resources::ResourceLoader,
+    resources::Loadable,
     transform::Transform,
 };
 use floating_duration::TimeAsFloat;
@@ -32,11 +31,8 @@ fn main() -> Result<(), Box<error::Error>> {
     let start_time = SystemTime::now();
     let mut last_time = start_time;
 
-    //Initialize ResourceLoader
-    let resource_loader = ResourceLoader::new("res".as_ref())?;
-
     //Load configuration from file
-    let conf = resource_loader.load::<config::Config>("config.ron".as_ref(), ())??;
+    let conf = config::Config::load_from_file("res/config.ron", ())?;
 
     //Initialize SDL
     let sdl = cuivre::init_sdl()?;
@@ -48,35 +44,37 @@ fn main() -> Result<(), Box<error::Error>> {
     let mut input_manager = InputManager::new();
 
     //Initialize graphics
-    let mut graphics_manager = GraphicsManager::new(&sdl, WindowSettings {
-        title: "RustChess",
-        width: conf.video.width,
-        height: conf.video.height,
-        vsync: conf.video.vsync
-    })?;
-
+    let mut graphics_manager = GraphicsManager::new(
+        &sdl,
+        WindowSettings {
+            title: "RustChess",
+            width: conf.video.width,
+            height: conf.video.height,
+            vsync: conf.video.vsync,
+        },
+    )?;
 
     //Get default texture options
     let texture_options = TextureOptions::default();
 
     //Load tiles texture
-    let tiles_texture = resource_loader.load::<Texture>("sprites/tiles.png".as_ref(), texture_options)??;
+    let tiles_texture = Texture::load_from_file("res/sprites/tiles.png", texture_options)?;
     let tiles_sheet = SpriteSheet::new(tiles_texture, 16, 16);
 
     //Load pieces texture
-    let pieces_texture = resource_loader.load::<Texture>("sprites/pieces.png".as_ref(), texture_options)??;
+    let pieces_texture = Texture::load_from_file("res/sprites/pieces.png", texture_options)?;
     let pieces_sheet = SpriteSheet::new(pieces_texture, 16, 16);
 
     //Load font
-    let roboto = resource_loader.load::<Font>("fonts/Roboto.ttf".as_ref(), ())??;
+    let mut roboto = Font::load_from_file("res/fonts/Roboto.ttf", ())?;
     let text_transform = Transform::new();
 
     //Create camera
     let camera = Camera {
-        position: Point3f::new(4.0, 4.0, 1.0),
+        position: Point3f::new(4.0, 4.0, 10.0),
         direction: Vector3f::new(0.0, 0.0, -1.0),
         near: 0.1,
-        far: 10.0,
+        far: 100.0,
         size: 9.0,
         scale_mode: CameraScaleMode::Min,
         perspective: false,
@@ -121,7 +119,7 @@ fn main() -> Result<(), Box<error::Error>> {
         for x in 0..8 {
             for y in 0..8 {
                 let mut tile_transform =
-                    Transform::from_position(Point3f::new(x as f32 + 0.5, y as f32 + 0.5, -1.0));
+                    Transform::from_position(Point3f::new(x as f32 + 0.5, y as f32 + 0.5, 0.0));
 
                 let tile_sprite = tiles_sheet.sprite(0, x + y + 1);
                 graphics_manager.draw_sprite(&tile_sprite, &tile_transform, &camera);
@@ -130,13 +128,11 @@ fn main() -> Result<(), Box<error::Error>> {
 
         //draw pieces
         for piece in &pieces_manager.pieces {
-            let piece_sprite = piece.sprite(&pieces_sheet);
-            let transform = piece.transform();
-            graphics_manager.draw_sprite(&piece_sprite, &transform, &camera);
+            graphics_manager.draw_sprite(&piece.sprite(&pieces_sheet), &piece.transform(), &camera);
         }
 
         //draw text
-        graphics_manager.draw_text("Test!", &roboto, &text_transform, &camera)?;
+        graphics_manager.draw_text("this is a test!", &mut roboto, &text_transform, &camera)?;
         //Render
         graphics_manager.render()?;
 
