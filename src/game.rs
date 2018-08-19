@@ -1,5 +1,5 @@
 use super::{Sprite, SpriteSheet, Transform};
-use cuivre::maths::Point3f;
+use cuivre::maths::Vector3f;
 
 #[derive(Copy, Clone)]
 pub enum Team {
@@ -55,7 +55,7 @@ impl Piece {
     }
 
     pub fn transform(&self) -> Transform {
-        Transform::from_position(Point3f::new(self.x as f32 + 0.5, self.y as f32 + 0.5, 0.0))
+        Transform::from_position(Vector3f::new(self.x as f32 + 0.5, self.y as f32 + 0.5, 1.0))
     }
 }
 
