@@ -8,19 +8,18 @@ extern crate serde;
 use cuivre::{
     graphics::{
         camera::{Camera, CameraScaleMode},
-        sprites::{Sprite, SpriteSheet},
-        text::{Font, TextSettings},
+        sprites::SpriteSheet,
         textures::{Texture, TextureOptions},
         GraphicsManager, WindowSettings,
     },
-    input::{Event, InputManager, Keycode, WindowEvent},
+    input::{Event, InputManager, Keycode, MouseButton, WindowEvent},
     maths::Vector3f,
     resources::Loadable,
     transform::Transform,
 };
 use floating_duration::TimeAsFloat;
 use game::PiecesManager;
-use std::{error, time::SystemTime};
+use std::{cmp, error, time::SystemTime};
 
 mod config;
 mod game;
@@ -32,7 +31,7 @@ fn main() -> Result<(), Box<error::Error>> {
     let mut last_time = start_time;
 
     // Load configuration from file
-    let conf = config::Config::load_from_file("res/config.ron", ())?;
+    let conf = config::Config::load_from_file("res/config.ron", ())??;
 
     // Initialize SDL
     let sdl = cuivre::init_sdl()?;
@@ -55,25 +54,12 @@ fn main() -> Result<(), Box<error::Error>> {
     let texture_options = TextureOptions::default();
 
     // Load tiles texture
-    let tiles_texture = Texture::load_from_file("res/sprites/tiles.png", texture_options)?;
+    let tiles_texture = Texture::load_from_file("res/sprites/tiles.png", texture_options)??;
     let tiles_sheet = SpriteSheet::new(tiles_texture, 16, 16);
 
     // Load pieces texture
-    let pieces_texture = Texture::load_from_file("res/sprites/pieces.png", texture_options)?;
+    let pieces_texture = Texture::load_from_file("res/sprites/pieces.png", texture_options)??;
     let pieces_sheet = SpriteSheet::new(pieces_texture, 16, 16);
-
-    // Load font
-    let mut roboto = Font::load_from_file("res/fonts/Roboto.ttf", ())?;
-    let text_transform = Transform {
-        position: Vector3f::new(0.0, 8.0, 1.0),
-        scale: Vector3f::new(1.0, 1.0, 1.0),
-        rotation: Vector3f::new(0.0, 0.0, 0.0),
-    };
-    let text_settings = TextSettings {
-        scale: 100.0,
-        color: (255, 0, 255),
-        line_width: 800,
-    };
 
     // Create camera
     let mut camera = Camera {
@@ -87,7 +73,7 @@ fn main() -> Result<(), Box<error::Error>> {
     };
 
     // Create pieces manager
-    let pieces_manager = PiecesManager::new();
+    let mut pieces_manager = PiecesManager::new();
 
     println!(
         "Startup took {:?}",
@@ -126,30 +112,51 @@ fn main() -> Result<(), Box<error::Error>> {
         // Zoom
         camera.size -= input_manager.mouse_wheel() as f32;
 
+        // Click to move pieces
+        if input_manager.button(MouseButton::Left).pressed() {
+            let pixels_per_unit = (cmp::min(
+                graphics_manager.window_size().x,
+                graphics_manager.window_size().y,
+            ) as f32 / camera.size) as i32;
+
+            // Find out which tile was clicked
+            let window_size = graphics_manager.window_size();
+            let mouse_position = input_manager.mouse_position();
+            let tile_x = (4 * pixels_per_unit + mouse_position.x - window_size.x as i32 / 2)
+                / pixels_per_unit;
+            let tile_y = (4 * pixels_per_unit - mouse_position.y + window_size.y as i32 / 2)
+                / pixels_per_unit;
+
+            // Select piece if valid
+            pieces_manager.on_click(tile_x as usize, tile_y as usize)
+        }
+
         // Draw board
         for x in 0..8 {
             for y in 0..8 {
                 let mut tile_transform =
                     Transform::from_position(Vector3f::new(x as f32 + 0.5, y as f32 + 0.5, 0.0));
 
-                let tile_sprite = tiles_sheet.sprite(0, x + y + 1);
+                let tile_sprite = tiles_sheet.sprite(0, (x + y + 1) as i32);
                 graphics_manager.draw_sprite(&tile_sprite, &tile_transform, &camera);
             }
         }
 
-        // Draw pieces
-        for piece in &pieces_manager.pieces {
-            graphics_manager.draw_sprite(&piece.sprite(&pieces_sheet), &piece.transform(), &camera);
+        // Draw possible moves
+        for mov in pieces_manager.selected_moves() {
+            let (x, y) = mov.target_pos();
+
+            let mut tile_transform =
+                Transform::from_position(Vector3f::new(x as f32 + 0.5, y as f32 + 0.5, 0.0));
+
+            let tile_sprite = tiles_sheet.sprite(1, (x + y + 1) as i32);
+            graphics_manager.draw_sprite(&tile_sprite, &tile_transform, &camera);
         }
 
-        // Draw text
-        graphics_manager.draw_text(
-            "abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ1234567890-=!@#$%^&*()_+",
-            &mut roboto,
-            text_settings,
-            &text_transform,
-            &camera,
-        )?;
+        // Draw pieces
+        for piece in pieces_manager.pieces() {
+            graphics_manager.draw_sprite(&piece.sprite(&pieces_sheet), &piece.transform(), &camera)
+        }
 
         // Render
         graphics_manager.render()?;
